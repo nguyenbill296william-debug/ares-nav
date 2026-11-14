@@ -11,6 +11,56 @@ window.ARES_HUD = (function () {
     return Math.max(lo, Math.min(hi, v));
   }
 
+  const BUTLER_360_PINS = [
+    {
+      yawDeg: 58,
+      pitchY: 0.43,
+      label: 'Western Delta Scarp',
+      detail: 'Ancient Jezero river delta front (~2.2 km NW)',
+      type: 'sci',
+      distM: 2200,
+      elevM: '+45m'
+    },
+    {
+      yawDeg: 148,
+      pitchY: 0.44,
+      label: 'Kodiak Delta Butte',
+      detail: 'Erosional delta remnant preserving lakebed strata',
+      type: 'sci',
+      distM: 2400,
+      elevM: '+38m'
+    },
+    {
+      yawDeg: 252,
+      pitchY: 0.42,
+      label: 'Santa Cruz Hill',
+      detail: 'Crater-floor volcanic remnant (~2.5 km SE)',
+      type: 'nav',
+      distM: 2500,
+      elevM: '+52m'
+    }
+  ];
+
+  function fmtDist(distM) {
+    const n = Number(distM) || 0;
+    return n >= 1000 ? `${(n / 1000).toFixed(1)} km` : `${n}m`;
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(x, y, w, h, rr);
+    } else {
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+  }
+
   function getCachedImage(src, onLoad) {
     if (!src) return null;
     if (imageCache[src]) return imageCache[src];
@@ -78,43 +128,62 @@ window.ARES_HUD = (function () {
     const fovDeg = 90 / (state.hudZoom || 1);
     const supportsCtxFilter = typeof ctx.filter === 'string';
 
+    const isPanoView =
+      !state.customHudImage &&
+      (state.visorSourceMode === 'pano' || state.visorSourceMode === 'butler360');
+
     const renderSingleEyeViewport = (vw, vh, yawBiasDeg, hudParallaxPx, isStereoEye, eyeSign) => {
       const effectiveYaw = (((state.hudYawDeg || 0) + yawBiasDeg) % 360 + 360) % 360;
-      const eyeState = Object.assign({}, state, {
-        hudYawDeg: effectiveYaw,
-        _hudParallaxPx: hudParallaxPx || 0,
-        _isStereoEye: !!isStereoEye,
-        _eyeSign: eyeSign || 0,
-        _crewNx: crewPos.nx,
-        _crewNy: crewPos.ny
-      });
+      const proj = {
+        isPanoView,
+        isWide: false,
+        drawW: vw * 2.4,
+        drawH: vh,
+        dy: 0,
+        baseW: vw,
+        baseH: vh,
+        dx: 0,
+        refHeadingDeg: wp.hudHeadingDeg || 110
+      };
 
       if (img && img.complete && img.naturalWidth > 0) {
         const isWide = img.naturalWidth / img.naturalHeight >= 2.1;
+        proj.isWide = isWide;
         const filterMode = state.visorFilterMode || 'natural';
+
+        if (isWide) {
+          proj.drawH = vh * 1.24 * (state.hudZoom || 1);
+          proj.drawW = Math.max(vw * 2.2, (img.naturalWidth / img.naturalHeight) * proj.drawH);
+          const pitchOffsetPx = (state.hudPitchOffset || 0) * vh * 0.42;
+          proj.dy = clamp((vh - proj.drawH) / 2 + pitchOffsetPx, vh - proj.drawH, 0);
+        } else {
+          const imgAspect = img.naturalWidth / img.naturalHeight;
+          let baseW = vw * 1.18 * (state.hudZoom || 1);
+          let baseH = baseW / imgAspect;
+          if (baseH < vh * 1.22 * (state.hudZoom || 1)) {
+            baseH = vh * 1.22 * (state.hudZoom || 1);
+            baseW = baseH * imgAspect;
+          }
+          const yawDelta = (((effectiveYaw - wp.hudHeadingDeg + 540) % 360) - 180) / 180;
+          proj.baseW = baseW;
+          proj.baseH = baseH;
+          proj.dx = (vw - baseW) / 2 - yawDelta * (baseW - vw) * 0.48;
+          proj.dy = clamp(
+            (vh - baseH) / 2 + (state.hudPitchOffset || 0) * vh * 0.36,
+            vh - baseH,
+            0
+          );
+        }
 
         const drawPanoramaPass = (offsetX) => {
           if (isWide) {
-            const drawH = vh * (state.hudZoom || 1);
-            const drawW = Math.max(vw * 2.2, (img.naturalWidth / img.naturalHeight) * drawH);
-            const pitchOffsetPx = (state.hudPitchOffset || 0) * vh * 0.4;
-            const dy = (vh - drawH) / 2 + pitchOffsetPx;
-            const scrollX = (effectiveYaw / 360) * drawW;
-
-            ctx.drawImage(img, -scrollX + offsetX, dy, drawW, drawH);
-            ctx.drawImage(img, drawW - scrollX + offsetX, dy, drawW, drawH);
+            const scrollX =
+              (((effectiveYaw / 360) * proj.drawW - vw / 2) % proj.drawW + proj.drawW) %
+              proj.drawW;
+            ctx.drawImage(img, -scrollX + offsetX, proj.dy, proj.drawW, proj.drawH);
+            ctx.drawImage(img, proj.drawW - scrollX + offsetX, proj.dy, proj.drawW, proj.drawH);
           } else {
-            const imgAspect = img.naturalWidth / img.naturalHeight;
-            let baseW = vw * 1.18 * (state.hudZoom || 1);
-            let baseH = baseW / imgAspect;
-            if (baseH < vh * 1.05 * (state.hudZoom || 1)) {
-              baseH = vh * 1.05 * (state.hudZoom || 1);
-              baseW = baseH * imgAspect;
-            }
-            const yawDelta = (((effectiveYaw - wp.hudHeadingDeg + 540) % 360) - 180) / 180;
-            const dx = (vw - baseW) / 2 - yawDelta * (baseW - vw) * 0.48;
-            const dy = (vh - baseH) / 2 + (state.hudPitchOffset || 0) * vh * 0.35;
-            ctx.drawImage(img, dx + offsetX, dy, baseW, baseH);
+            ctx.drawImage(img, proj.dx + offsetX, proj.dy, proj.baseW, proj.baseH);
           }
         };
 
@@ -170,14 +239,28 @@ window.ARES_HUD = (function () {
         ctx.restore();
       }
 
-      // 1B. Martian Diurnal Solar LTST Twilight & Atmospheric Dust Optical Depth (τ) Whiteout
-      drawAtmosphericScattering(ctx, vw, vh, eyeState);
+      const eyeState = Object.assign({}, state, {
+        hudYawDeg: effectiveYaw,
+        _hudParallaxPx: hudParallaxPx || 0,
+        _isStereoEye: !!isStereoEye,
+        _eyeSign: eyeSign || 0,
+        _crewNx: crewPos.nx,
+        _crewNy: crewPos.ny,
+        _proj: proj
+      });
+
+      // 1B. Martian Diurnal Solar LTST Twilight & Atmospheric Dust Optical Depth (τ) Whiteout (Pano views only)
+      if (isPanoView) {
+        drawAtmosphericScattering(ctx, vw, vh, eyeState);
+      }
 
       if (state.hudDecluttered) return;
 
-      // 2. Render 3D Perspective Ground-Plane Metric Grid & Optional DEM Synthetic Vision Wireframe
-      drawGroundPerspectiveGrid(ctx, vw, vh, wp, eyeState);
-      if (state.visorSyntheticVision) {
+      // 2. Render Ground Range Grid ONLY when Synthetic Vision or Laser Aim is active on Panoramic Views
+      if (isPanoView && (state.visorSyntheticVision || state.laserAimMode)) {
+        drawGroundPerspectiveGrid(ctx, vw, vh, wp, eyeState);
+      }
+      if (isPanoView && state.visorSyntheticVision) {
         drawSyntheticVisionWireframe(ctx, vw, vh, theater, wp, eyeState, fovDeg);
       }
 
@@ -700,81 +783,155 @@ window.ARES_HUD = (function () {
   }
 
   function drawSpatialARPins(ctx, w, h, wp, state, fovDeg) {
-    if (state.customHudImage) return;
-    ctx.save();
-    const pins = wp.arPins || [];
+    const proj = state._proj || { isPanoView: false, isWide: true, drawW: w * 2.4, drawH: h, dy: 0 };
     const heading = (((state.hudYawDeg || 0) % 360) + 360) % 360;
 
-    pins.forEach((pin) => {
-      const dYaw = ((pin.yawDeg - heading + 540) % 360) - 180;
-      if (Math.abs(dYaw) > fovDeg * 0.72) return;
+    const yawToScreenX = (targetYawDeg, stereoDisp) => {
+      const dYaw = ((targetYawDeg - heading + 540) % 360) - 180;
+      if (proj.isWide) {
+        return w * 0.5 + (dYaw / 360) * proj.drawW + (stereoDisp || 0);
+      }
+      return (
+        w * 0.5 +
+        (dYaw / Math.max(30, fovDeg * 0.72)) * (w * 0.42) +
+        (stereoDisp || 0)
+      );
+    };
 
-      const distM = Math.max(1.8, parseFloat(pin.distM) || 15);
-      const stereoDisparityPx = state._isStereoEye
-        ? (state._eyeSign || 0) * clamp(15.5 / distM, 0.4, 8.2)
-        : 0;
+    ctx.save();
 
-      const px = w * 0.5 + (dYaw / (fovDeg * 0.65)) * (w * 0.42) + stereoDisparityPx;
-      const py = pin.pitchY * h + (state.hudPitchOffset || 0) * h * 0.35;
+    if (proj.isPanoView && !state.hideArPins) {
+      const rawPins =
+        state.visorSourceMode === 'butler360' ? BUTLER_360_PINS : wp.arPins || [];
+      const visible = [];
 
-      const color =
-        pin.type === 'hazard'
-          ? '#ef4444'
-          : pin.type === 'shelter'
-          ? '#22c55e'
-          : pin.type === 'sci'
-          ? '#22c55e'
-          : '#f59e0b';
+      rawPins.forEach((pin, idx) => {
+        const distM = Math.max(1.8, parseFloat(pin.distM) || 15);
+        const stereoDisparityPx = state._isStereoEye
+          ? (state._eyeSign || 0) * clamp(14.0 / distM, 0.35, 7.2)
+          : 0;
+        const px = yawToScreenX(pin.yawDeg, stereoDisparityPx);
+        if (px < -40 || px > w + 40) return;
 
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.arc(px, py, 8, 0, Math.PI * 2);
-      ctx.stroke();
+        const pyRaw = proj.isWide
+          ? proj.dy + pin.pitchY * proj.drawH
+          : proj.dy + pin.pitchY * proj.baseH;
+        const py = clamp(pyRaw, 92, h - 38);
+        visible.push({ pin, idx, px, py, distM });
+      });
 
-      ctx.beginPath();
-      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
+      visible.sort((a, b) => a.px - b.px);
 
-      ctx.beginPath();
-      ctx.moveTo(px, py - 8);
-      ctx.lineTo(px, py - 34);
-      ctx.stroke();
+      let prevPillRight = -999;
+      let prevTier = 0;
 
-      const topLine = `${pin.label}  [${pin.distM}m | ${pin.elevM}]`;
-      const subLine = pin.detail;
-      ctx.font = '700 10px "JetBrains Mono", monospace';
-      const w1 = ctx.measureText(topLine).width;
-      ctx.font = '500 9.5px "Inter", sans-serif';
-      const w2 = ctx.measureText(subLine).width;
-      const boxW = Math.min(w - 20, Math.max(w1, w2) + 16);
-      const boxH = 36;
-      const bx = clamp(px - boxW / 2, 10, w - boxW - 10);
-      const by = Math.max(58, py - 34 - boxH);
+      visible.forEach((item) => {
+        const { pin, px, py } = item;
+        const isFocused = Math.abs(px - w * 0.5) < 76;
+        const accent =
+          pin.type === 'hazard'
+            ? '#f87171'
+            : pin.type === 'shelter' || pin.type === 'sci'
+            ? '#34d399'
+            : '#fbbf24';
+        const borderAlpha = isFocused ? '0.82' : '0.42';
+        const borderRgba =
+          pin.type === 'hazard'
+            ? `rgba(248, 113, 113, ${borderAlpha})`
+            : pin.type === 'shelter' || pin.type === 'sci'
+            ? `rgba(52, 211, 153, ${borderAlpha})`
+            : `rgba(251, 191, 36, ${borderAlpha})`;
 
-      ctx.fillStyle = 'rgba(18, 16, 14, 0.90)';
-      ctx.fillRect(bx, by, boxW, boxH);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.4;
-      ctx.strokeRect(bx, by, boxW, boxH);
+        const distLabel = fmtDist(pin.distM);
+        const titleTxt = pin.label;
+        const badgeTxt = `${distLabel}`;
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(bx + 2, by + 2, boxW - 4, boxH - 4);
-      ctx.clip();
+        ctx.font = '600 10px "Inter", system-ui, sans-serif';
+        const titleW = ctx.measureText(titleTxt).width;
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
+        const badgeW = ctx.measureText(badgeTxt).width;
 
-      ctx.fillStyle = color;
-      ctx.font = '700 10px "JetBrains Mono", monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(topLine, bx + 8, by + 5);
+        let subW = 0;
+        if (isFocused && pin.detail) {
+          ctx.font = '500 9px "Inter", system-ui, sans-serif';
+          subW = ctx.measureText(pin.detail).width;
+        }
 
-      ctx.fillStyle = '#f5f5f4';
-      ctx.font = '500 9.5px "Inter", sans-serif';
-      ctx.fillText(subLine, bx + 8, by + 20);
-      ctx.restore();
-    });
+        const pillW = Math.min(w - 20, Math.max(titleW + badgeW + 34, isFocused ? subW + 20 : 0));
+        const pillH = isFocused && pin.detail ? 36 : 23;
+
+        let bx = clamp(px - pillW / 2, 10, w - pillW - 10);
+        let tier = 0;
+        if (bx < prevPillRight + 10) {
+          tier = (prevTier + 1) % 2;
+        }
+        prevPillRight = bx + pillW;
+        prevTier = tier;
+
+        const stemLen = 18 + tier * 28;
+        const by = Math.max(62, py - stemLen - pillH);
+
+        // Sleek precision surface reticle
+        ctx.strokeStyle = borderRgba;
+        ctx.lineWidth = isFocused ? 1.8 : 1.3;
+        ctx.beginPath();
+        ctx.arc(px, py, isFocused ? 7.5 : 5.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Slender vertical leader stem
+        ctx.strokeStyle = borderRgba;
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(px, py - (isFocused ? 7.5 : 5.5));
+        ctx.lineTo(px, by + pillH);
+        ctx.stroke();
+
+        // Compact Frosted Glass Capsule
+        roundRectPath(ctx, bx, by, pillW, pillH, 7);
+        ctx.fillStyle = isFocused ? 'rgba(14, 12, 11, 0.90)' : 'rgba(14, 12, 11, 0.74)';
+        ctx.fill();
+        ctx.strokeStyle = borderRgba;
+        ctx.lineWidth = isFocused ? 1.4 : 1.0;
+        ctx.stroke();
+
+        ctx.save();
+        roundRectPath(ctx, bx + 1, by + 1, pillW - 2, pillH - 2, 6);
+        ctx.clip();
+
+        // Status Dot
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.arc(bx + 10, by + 11.5, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Clean Title
+        ctx.fillStyle = '#fafaf9';
+        ctx.font = '600 10px "Inter", system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(titleTxt, bx + 18, by + 11.5);
+
+        // Right-aligned Muted Distance Tag
+        ctx.fillStyle = accent;
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(badgeTxt, bx + pillW - 8, by + 11.5);
+
+        // Secondary geologic detail ONLY when aimed at / focused
+        if (isFocused && pin.detail) {
+          ctx.fillStyle = '#d6d3d1';
+          ctx.font = '500 9px "Inter", system-ui, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(pin.detail, bx + 10, by + 26.5);
+        }
+        ctx.restore();
+      });
+    }
 
     // Bi-Directional Houston <-> Mars CapCom Priority Target AR Diamond + Off-Screen Lens Chevrons
     if (state.capcomTarget) {
@@ -797,23 +954,24 @@ window.ARES_HUD = (function () {
             (typeof performance !== 'undefined' ? performance.now() : Date.now()) * 0.006
           );
 
-      if (Math.abs(dYaw) <= fovDeg * 0.62) {
-        const stereoDisp = state._isStereoEye
-          ? (state._eyeSign || 0) * clamp(15.5 / liveDistM, 0.5, 8.0)
-          : 0;
-        const px = w * 0.5 + (dYaw / (fovDeg * 0.65)) * (w * 0.42) + stereoDisp;
+      const stereoDisp = state._isStereoEye
+        ? (state._eyeSign || 0) * clamp(15.5 / liveDistM, 0.5, 8.0)
+        : 0;
+      const px = yawToScreenX(liveBrg, stereoDisp);
+
+      if (px >= 16 && px <= w - 16) {
         const py = clamp(
           h * (0.46 + clamp(14 / Math.max(12, liveDistM), 0.02, 0.24)) +
             (state.hudPitchOffset || 0) * h * 0.35,
           96,
           h - 56
         );
-        const rOut = 12 + pulse * 5;
+        const rOut = 11 + pulse * 4.5;
 
         // Pulsing outer cyan diamond
         ctx.save();
         ctx.strokeStyle = `rgba(56, 189, 248, ${(0.45 + pulse * 0.45).toFixed(2)})`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(px, py - rOut);
         ctx.lineTo(px + rOut, py);
@@ -825,46 +983,51 @@ window.ARES_HUD = (function () {
         // Crisp inner target diamond
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
-        ctx.moveTo(px, py - 5);
-        ctx.lineTo(px + 5, py);
-        ctx.lineTo(px, py + 5);
-        ctx.lineTo(px - 5, py);
+        ctx.moveTo(px, py - 4.5);
+        ctx.lineTo(px + 4.5, py);
+        ctx.lineTo(px, py + 4.5);
+        ctx.lineTo(px - 4.5, py);
         ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
         ctx.moveTo(px, py - rOut);
-        ctx.lineTo(px, py - 42);
+        ctx.lineTo(px, py - 34);
         ctx.stroke();
 
-        const topTxt = `◆ ${tgt.label || 'CAPCOM PRIORITY TARGET'} [${liveDistM}m | ${String(liveBrg).padStart(3, '0')}°]`;
-        const subTxt = `${tgt.mineral || 'Science Outcrop'} • Slope ${tgt.slopeDeg ?? 6.5}° • ${tgt.elevM ?? -2010}m`;
-        ctx.font = '700 10px "JetBrains Mono", monospace';
+        const topTxt = `◆ ${tgt.label || 'CAPCOM TARGET'}  ${liveDistM}m • ${String(liveBrg).padStart(3, '0')}°`;
+        const subTxt = `${tgt.mineral || 'Science Outcrop'} • Slope ${tgt.slopeDeg ?? 6.5}°`;
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
         const tw1 = ctx.measureText(topTxt).width;
-        ctx.font = '600 9px "JetBrains Mono", monospace';
+        ctx.font = '500 9px "Inter", system-ui, sans-serif';
         const tw2 = ctx.measureText(subTxt).width;
-        const bw = Math.min(w - 20, Math.max(tw1, tw2) + 18);
-        const bh = 38;
+        const bw = Math.min(w - 20, Math.max(tw1, tw2) + 20);
+        const bh = 36;
         const bx = clamp(px - bw / 2, 10, w - bw - 10);
-        const by = Math.max(62, py - 42 - bh);
+        const by = Math.max(62, py - 34 - bh);
 
-        ctx.fillStyle = 'rgba(8, 22, 34, 0.94)';
-        ctx.fillRect(bx, by, bw, bh);
+        roundRectPath(ctx, bx, by, bw, bh, 8);
+        ctx.fillStyle = 'rgba(8, 22, 34, 0.90)';
+        ctx.fill();
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.6;
-        ctx.strokeRect(bx, by, bw, bh);
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
 
+        ctx.save();
+        roundRectPath(ctx, bx + 1, by + 1, bw - 2, bh - 2, 7);
+        ctx.clip();
         ctx.fillStyle = '#38bdf8';
-        ctx.font = '700 10px "JetBrains Mono", monospace';
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        ctx.fillText(topTxt, bx + 8, by + 5);
+        ctx.fillText(topTxt, bx + 9, by + 5);
 
         ctx.fillStyle = '#e0f2fe';
-        ctx.font = '600 9px "JetBrains Mono", monospace';
-        ctx.fillText(subTxt, bx + 8, by + 21);
+        ctx.font = '500 9px "Inter", system-ui, sans-serif';
+        ctx.fillText(subTxt, bx + 9, by + 20);
+        ctx.restore();
         ctx.restore();
       } else {
         // Off-Screen Edge Guidance Chevron so 3D Goggle Wearer knows which way to turn head!
@@ -874,22 +1037,23 @@ window.ARES_HUD = (function () {
           ? `CAPCOM ${degOff}° ▶`
           : `◀ ${degOff}° CAPCOM`;
         ctx.save();
-        ctx.font = '700 10px "JetBrains Mono", monospace';
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
         const pw = ctx.measureText(pillTxt).width + 18;
         const ph = 24;
-        const px = isRight ? w - pw - 12 : 12;
-        const py = h * 0.5 - ph / 2;
+        const edgeX = isRight ? w - pw - 12 : 12;
+        const edgeY = h * 0.5 - ph / 2;
 
-        ctx.fillStyle = 'rgba(8, 24, 38, 0.94)';
+        roundRectPath(ctx, edgeX, edgeY, pw, ph, 6);
+        ctx.fillStyle = 'rgba(8, 24, 38, 0.90)';
+        ctx.fill();
         ctx.strokeStyle = `rgba(56, 189, 248, ${(0.55 + pulse * 0.45).toFixed(2)})`;
-        ctx.lineWidth = 1.8;
-        ctx.fillRect(px, py, pw, ph);
-        ctx.strokeRect(px, py, pw, ph);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
 
         ctx.fillStyle = '#38bdf8';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(pillTxt, px + pw / 2, py + ph / 2);
+        ctx.fillText(pillTxt, edgeX + pw / 2, edgeY + ph / 2);
         ctx.restore();
       }
     }
@@ -1077,29 +1241,59 @@ window.ARES_HUD = (function () {
       const ox = state.lastLaserOxides || wp.oxides;
       const bioScore = state.lastLaserBiosig || 91;
       const rockTitle = state.lastLaserRockName || 'AUTHIGENIC CARBONATE OUTCROP';
-      const rockMeta = state.lastLaserMeta || 'AZM 142° • DIST 3.4m • 10,000K LIBS PLASMA';
-      const cardW = Math.min(w - 20, 320);
-      const cardH = 180;
-      const bx = clamp(tx - cardW / 2, 10, w - cardW - 10);
-      const by = clamp(ty + 16, 60, Math.max(60, h - cardH - 38));
+      const rockMeta = state.lastLaserMeta || 'AZM 142° • DIST 3.4m • LIBS PLASMA';
+      const cardW = Math.min(w - 24, state._isStereoEye ? 268 : 332);
+      const cardH = 178;
+      const bx = state._isStereoEye
+        ? clamp(cx - cardW / 2, 10, w - cardW - 10)
+        : Math.max(12, w - cardW - 16);
+      const by = state._isStereoEye
+        ? Math.max(56, h - cardH - 38)
+        : Math.max(60, h - cardH - 16);
 
-      ctx.fillStyle = 'rgba(18, 16, 14, 0.95)';
-      ctx.fillRect(bx, by, cardW, cardH);
-      ctx.strokeStyle = '#f97316';
-      ctx.lineWidth = 1.6;
-      ctx.strokeRect(bx, by, cardW, cardH);
+      if (!state._isStereoEye && ctx.canvas) {
+        ctx.canvas._libsCloseBounds = { x: bx + cardW - 28, y: by + 4, w: 24, h: 22 };
+      }
 
+      roundRectPath(ctx, bx, by, cardW, cardH, 10);
+      ctx.fillStyle = 'rgba(14, 12, 11, 0.94)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(249, 115, 22, 0.72)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      ctx.save();
+      roundRectPath(ctx, bx + 2, by + 2, cardW - 4, cardH - 4, 8);
+      ctx.clip();
+
+      // Header + Close [×] button
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(bx + 8, by + 4, cardW - (state._isStereoEye ? 16 : 38), 30);
+      ctx.clip();
       ctx.fillStyle = '#fb923c';
-      ctx.font = '700 10px "JetBrains Mono", monospace';
+      ctx.font = '700 9.5px "JetBrains Mono", monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`TARGET: ${rockTitle}`, bx + 10, by + 7);
+      ctx.fillText(`LIBS // ${rockTitle}`, bx + 10, by + 7);
 
       ctx.fillStyle = '#a8a29e';
-      ctx.font = '600 8.5px "JetBrains Mono", monospace';
-      ctx.fillText(rockMeta, bx + 10, by + 21);
+      ctx.font = '600 8px "JetBrains Mono", monospace';
+      ctx.fillText(rockMeta, bx + 10, by + 20);
+      ctx.restore();
 
-      drawLibsEmissionSpectrum(ctx, bx + 10, by + 35, cardW - 20, 48, ox, bioScore);
+      if (!state._isStereoEye) {
+        roundRectPath(ctx, bx + cardW - 25, by + 6, 18, 18, 4);
+        ctx.fillStyle = 'rgba(41, 37, 36, 0.9)';
+        ctx.fill();
+        ctx.fillStyle = '#d6d3d1';
+        ctx.font = '700 10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✕', bx + cardW - 16, by + 15);
+      }
+
+      drawLibsEmissionSpectrum(ctx, bx + 10, by + 35, cardW - 20, 46, ox, bioScore);
 
       const bars = [
         { k: 'SiO₂', v: ox.SiO2, c: '#f97316' },
@@ -1108,27 +1302,34 @@ window.ARES_HUD = (function () {
         { k: 'Al₂O₃', v: ox.Al2O3, c: '#eab308' },
         { k: 'SO₃', v: ox.SO3, c: '#f59e0b' }
       ];
-      const maxBarW = Math.max(80, cardW - 130);
+      const maxBarW = Math.max(70, cardW - 122);
       bars.forEach((b, idx) => {
-        const rowY = by + 90 + idx * 13;
+        const rowY = by + 89 + idx * 13;
         ctx.fillStyle = '#e7e5e4';
-        ctx.font = '700 9px "JetBrains Mono", monospace';
+        ctx.font = '700 8.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
         ctx.fillText(b.k, bx + 10, rowY);
 
         ctx.fillStyle = 'rgba(41, 37, 36, 0.95)';
-        ctx.fillRect(bx + 52, rowY + 1, maxBarW, 6.5);
+        ctx.fillRect(bx + 48, rowY + 1.5, maxBarW, 6);
         ctx.fillStyle = b.c;
-        ctx.fillRect(bx + 52, rowY + 1, Math.min(maxBarW, (b.v / 62) * maxBarW), 6.5);
+        ctx.fillRect(bx + 48, rowY + 1.5, Math.min(maxBarW, (b.v / 62) * maxBarW), 6);
 
         ctx.fillStyle = '#fafaf9';
-        ctx.fillText(`${b.v}%`, bx + 58 + maxBarW, rowY);
+        ctx.fillText(`${b.v}%`, bx + 54 + maxBarW, rowY);
       });
 
       const bioTier =
         bioScore >= 85 ? 'HIGH PRIORITY' : bioScore >= 65 ? 'MODERATE' : 'IGNEOUS BASELINE';
-      ctx.fillStyle = bioScore >= 85 ? '#22c55e' : '#fbbf24';
-      ctx.font = '700 9px "JetBrains Mono", monospace';
-      ctx.fillText(`BIOSIGNATURE INDEX: ${bioScore}% [${bioTier}]`, bx + 10, by + 160);
+      ctx.fillStyle = bioScore >= 85 ? '#34d399' : '#fbbf24';
+      ctx.font = '700 8.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`BIOSIGNATURE: ${bioScore}% [${bioTier}]`, bx + 10, by + 158);
+      ctx.restore();
+    } else if (!state._isStereoEye && ctx.canvas) {
+      ctx.canvas._libsCloseBounds = null;
     }
 
     ctx.restore();

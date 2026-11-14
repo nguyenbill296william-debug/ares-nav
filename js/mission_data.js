@@ -104,8 +104,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 45.1, MgO: 11.4, FeOT: 17.8, SO3: 9.5, Al2O3: 9.0, CaO: 7.2 },
         arPins: [
-          { yawDeg: 195, pitchY: 0.44, label: 'Gediz Vallis Channel Ascent', detail: 'Primary least-effort switchback route (<12° grade)', type: 'nav', distM: 145, elevM: '+19m' },
-          { yawDeg: 242, pitchY: 0.36, label: 'Sulfate-Bearing Unit Cliff', detail: '27.4° steep scarp — flagged No-Go on HiRISE DEM', type: 'hazard', distM: 310, elevM: '+68m' }
+          { yawDeg: 192, pitchY: 0.50, label: 'Gediz Vallis Ascent', detail: 'Least-effort switchback corridor (<12° grade)', type: 'nav', distM: 145, elevM: '+19m' },
+          { yawDeg: 244, pitchY: 0.39, label: 'Sulfate Unit Scarp', detail: '27.4° steep cliff — flagged No-Go on HiRISE DEM', type: 'hazard', distM: 310, elevM: '+68m' }
         ]
       },
       {
@@ -143,9 +143,9 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 41.2, MgO: 13.8, FeOT: 16.4, SO3: 13.7, Al2O3: 8.1, CaO: 6.8 },
         arPins: [
-          { yawDeg: 325, pitchY: 0.64, label: 'Wheel Trench Bearing Test', detail: '280 TIU consolidated sulfate crust (1.6cm sinkage)', type: 'sci', distM: 3.4, elevM: '-0.2m' },
-          { yawDeg: 355, pitchY: 0.28, label: 'Northern Gale Crater Rim', detail: '28.5 km distant horizon reference for optical tau', type: 'nav', distM: 28500, elevM: '+1840m' },
-          { yawDeg: 290, pitchY: 0.58, label: 'Eolian Sand Hollow (<120 TIU)', detail: 'Loose drift hazard — bypass on high-TI bedrock spine', type: 'hazard', distM: 12.0, elevM: '-1.4m' }
+          { yawDeg: 322, pitchY: 0.68, label: 'Wheel Trench Test', detail: '280 TIU sulfate crust (1.6 cm grouser depth)', type: 'sci', distM: 3.4, elevM: '-0.2m' },
+          { yawDeg: 356, pitchY: 0.33, label: 'Gale Northern Rim', detail: '28.5 km horizon optical tau reference', type: 'nav', distM: 28500, elevM: '+1840m' },
+          { yawDeg: 286, pitchY: 0.62, label: 'Eolian Sand Hollow', detail: 'Loose drift (<120 TIU) — stay on bedrock spine', type: 'hazard', distM: 12.0, elevM: '-1.4m' }
         ]
       },
       {
@@ -183,8 +183,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 49.8, MgO: 10.2, FeOT: 18.9, SO3: 14.2, Al2O3: 7.5, CaO: 9.4 },
         arPins: [
-          { yawDeg: 95, pitchY: 0.52, label: 'Polygonal Boxwork Fin #1', detail: 'High-priority astrobiology target: groundwater vein precipitate', type: 'sci', distM: 4.8, elevM: '+1.2m' },
-          { yawDeg: 128, pitchY: 0.62, label: 'Inter-Ridge Eolian Hollow', detail: 'Fine windblown dust trap (<120 TIU) — Do Not Enter', type: 'hazard', distM: 7.5, elevM: '-1.8m' }
+          { yawDeg: 92, pitchY: 0.58, label: 'Boxwork Ridge Fin #1', detail: 'Groundwater sulfate-silica vein precipitate', type: 'sci', distM: 4.8, elevM: '+1.2m' },
+          { yawDeg: 132, pitchY: 0.66, label: 'Inter-Ridge Sand Trap', detail: 'Windblown hollow (<120 TIU) — bypass along crest', type: 'hazard', distM: 7.5, elevM: '-1.8m' }
         ]
       },
       {
@@ -222,8 +222,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 44.6, MgO: 11.9, FeOT: 20.4, SO3: 17.5, Al2O3: 6.8, CaO: 11.2 },
         arPins: [
-          { yawDeg: 152, pitchY: 0.48, label: 'Multi-Stage Diagenetic Vein', detail: 'CaSO₄ + Fe-oxide groundwater suture zone (0.97 CRISM)', type: 'sci', distM: 2.1, elevM: '+0.6m' },
-          { yawDeg: 180, pitchY: 0.38, label: 'Shelter Alcove Lee Wall', detail: 'Natural Radiation Shelter SH-GC-1 (-68% SEP/GCR flux)', type: 'shelter', distM: 3.2, elevM: '+2.4m' }
+          { yawDeg: 146, pitchY: 0.56, label: 'Diagenetic Vein Suture', detail: 'CaSO₄ + Fe-oxide fracture zone (0.97 CRISM)', type: 'sci', distM: 2.1, elevM: '+0.6m' },
+          { yawDeg: 184, pitchY: 0.44, label: 'Shelter Alcove Wall', detail: 'Radiation Shelter SH-GC-1 (-68% SEP/GCR flux)', type: 'shelter', distM: 3.2, elevM: '+2.4m' }
         ]
       },
       {
@@ -261,8 +261,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 47.3, MgO: 14.5, FeOT: 16.9, SO3: 15.3, Al2O3: 8.2, CaO: 7.8 },
         arPins: [
-          { yawDeg: 60, pitchY: 0.50, label: 'Upper Boxwork Mega-Grid', detail: 'Polygonal ridge network spanning >400m across slope', type: 'sci', distM: 38.0, elevM: '+8.5m' },
-          { yawDeg: 98, pitchY: 0.32, label: 'Upper Mount Sharp Scarp (>26°)', detail: 'Turnaround boundary — exceeds 25° maximum safe EVA slope', type: 'hazard', distM: 85.0, elevM: '+34.0m' }
+          { yawDeg: 56, pitchY: 0.54, label: 'Boxwork Mega-Grid', detail: 'Polygonal ridge network spanning >400m', type: 'sci', distM: 38.0, elevM: '+8.5m' },
+          { yawDeg: 102, pitchY: 0.36, label: 'Mount Sharp Scarp (>26°)', detail: 'Turnaround limit — exceeds 25° safe EVA slope', type: 'hazard', distM: 85.0, elevM: '+34.0m' }
         ]
       }
     ]
@@ -371,8 +371,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 43.8, MgO: 17.2, FeOT: 16.1, SO3: 4.6, Al2O3: 8.9, CaO: 7.4 },
         arPins: [
-          { yawDeg: 52, pitchY: 0.58, label: 'IDD Turret Calibration Head', detail: 'Sequence N0930000FHAZ00206 deployed on carbonate slab', type: 'nav', distM: 1.9, elevM: '-0.4m' },
-          { yawDeg: 84, pitchY: 0.36, label: 'Neretva Vallis Low-Grade Pass', detail: 'Optimal <6° traverse route avoiding southern sand drift', type: 'nav', distM: 185, elevM: '+14m' }
+          { yawDeg: 48, pitchY: 0.64, label: 'IDD Calibration Target', detail: 'FHAZ00206 turret deployed on carbonate slab', type: 'nav', distM: 1.9, elevM: '-0.4m' },
+          { yawDeg: 88, pitchY: 0.44, label: 'Neretva Low-Grade Pass', detail: 'Optimal <6° route bypassing southern sand drift', type: 'nav', distM: 185, elevM: '+14m' }
         ]
       },
       {
@@ -410,8 +410,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 46.2, MgO: 15.8, FeOT: 17.5, SO3: 3.5, Al2O3: 9.1, CaO: 6.9 },
         arPins: [
-          { yawDeg: 102, pitchY: 0.54, label: 'Low-Effort Bedrock Corridor', detail: '5.8° grade — optimal metabolic traverse path', type: 'nav', distM: 24.0, elevM: '+2.1m' },
-          { yawDeg: 138, pitchY: 0.66, label: 'Eolian Ripple Drift (<130 TIU)', detail: 'Loose sand sinkage hazard — bypass to north', type: 'hazard', distM: 11.5, elevM: '-0.8m' }
+          { yawDeg: 98, pitchY: 0.58, label: 'Bedrock Traverse Spine', detail: '5.8° grade — lowest metabolic O₂ burn path', type: 'nav', distM: 24.0, elevM: '+2.1m' },
+          { yawDeg: 142, pitchY: 0.68, label: 'Eolian Ripple Drift', detail: 'Loose sand (<130 TIU) — bypass to north', type: 'hazard', distM: 11.5, elevM: '-0.8m' }
         ]
       },
       {
@@ -449,8 +449,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 52.4, MgO: 9.6, FeOT: 14.2, SO3: 11.4, Al2O3: 7.9, CaO: 8.8 },
         arPins: [
-          { yawDeg: 135, pitchY: 0.60, label: 'IDD Coring Target #2023-BA', detail: 'Planar mudstone slab imaged in N0930000NCAM00347', type: 'sci', distM: 2.2, elevM: '-0.5m' },
-          { yawDeg: 162, pitchY: 0.52, label: 'SHERLOC Hydrated Vein Array', detail: 'Sub-mm CaSO₄ veins (Sequence N0930000SRLC02503)', type: 'sci', distM: 3.1, elevM: '-0.3m' }
+          { yawDeg: 126, pitchY: 0.69, label: 'Coring Slab #2023-BA', detail: 'Bright Angel planar mudstone (NCAM00347)', type: 'sci', distM: 2.2, elevM: '-0.5m' },
+          { yawDeg: 166, pitchY: 0.61, label: 'Ca-Sulfate Vein Array', detail: 'SHERLOC hydrated fracture veins (SRLC02503)', type: 'sci', distM: 3.1, elevM: '-0.3m' }
         ]
       },
       {
@@ -488,8 +488,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 50.9, MgO: 14.1, FeOT: 15.6, SO3: 2.1, Al2O3: 10.4, CaO: 6.2 },
         arPins: [
-          { yawDeg: 178, pitchY: 0.44, label: 'Megabreccia Radiation Shelter', detail: 'SH-JV-1: -74% GCR/SEP horizon shielding', type: 'shelter', distM: 4.5, elevM: '+2.8m' },
-          { yawDeg: 205, pitchY: 0.56, label: 'SuperCam LIBS Pit Array', detail: 'Sol 2024 RMI target LRE_2024_0846616684 (SCAM01024)', type: 'sci', distM: 2.8, elevM: '+0.4m' }
+          { yawDeg: 172, pitchY: 0.48, label: 'Megabreccia Shelter', detail: 'SH-JV-1 overhang: -74% GCR/SEP shielding', type: 'shelter', distM: 4.5, elevM: '+2.8m' },
+          { yawDeg: 210, pitchY: 0.62, label: 'SuperCam LIBS Target', detail: 'Sol 2024 RMI pit array (SCAM01024)', type: 'sci', distM: 2.8, elevM: '+0.4m' }
         ]
       },
       {
@@ -527,8 +527,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 48.7, MgO: 12.4, FeOT: 19.8, SO3: 9.8, Al2O3: 7.6, CaO: 5.9 },
         arPins: [
-          { yawDeg: 225, pitchY: 0.56, label: 'Spherulitic Nodule Bench', detail: '0.98 CRISM Hydration Index — Sequence NCAM00709', type: 'sci', distM: 3.6, elevM: '+0.5m' },
-          { yawDeg: 262, pitchY: 0.30, label: 'Western Rim Scarp (>27° No-Go)', detail: 'Exceeds 25° suit-physics slope limit — Do Not Ascend', type: 'hazard', distM: 42.0, elevM: '+24.0m' }
+          { yawDeg: 222, pitchY: 0.60, label: 'Spherulitic Nodule Bench', detail: '0.98 CRISM Hydration Index (NCAM00709)', type: 'sci', distM: 3.6, elevM: '+0.5m' },
+          { yawDeg: 266, pitchY: 0.36, label: 'Western Rim Scarp (>27°)', detail: 'Exceeds 25° suit slope limit — No-Go', type: 'hazard', distM: 42.0, elevM: '+24.0m' }
         ]
       }
     ]

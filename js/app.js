@@ -61,7 +61,11 @@
     vrGogglesMode: false,
     gyroActive: false,
     gyroYawOffset: 0,
+    gyroPitchZero: 0,
+    _gyroCalibrated: false,
     _rawCompassHeading: null,
+    hideArPins: false,
+    dockTab: 'station',
     customHudImage: null,
     customHudTitle: null,
     customHudBadge: null,
@@ -75,6 +79,7 @@
     laserAimMode: false,
     laserPulseFrames: 0,
     laserResultActive: false,
+    laserFiredAtMs: 0,
     laserTargetX: 0.5,
     laserTargetY: 0.5,
     lastLaserOxides: null,
@@ -268,6 +273,7 @@
     state.laserTargetY = Math.max(0.12, Math.min(0.86, normY));
     state.laserPulseFrames = 65;
     state.laserResultActive = true;
+    state.laserFiredAtMs = Date.now();
 
     // Pick a distinct geological target profile based on world azimuth + aim point
     const worldAz = Math.round((state.hudYawDeg + (normX - 0.5) * 90 + 360) % 360);
@@ -379,6 +385,9 @@
   }
 
   function setMode(mode) {
+    if (mode !== 'visor' && state.vrGogglesMode && window.ARES_APP && window.ARES_APP.toggleVrGogglesMode) {
+      window.ARES_APP.toggleVrGogglesMode();
+    }
     state.activeMode = mode;
     ['globe', 'map', 'visor', 'science'].forEach((m) => {
       const view = document.getElementById(`view_${m}`);
@@ -1102,6 +1111,17 @@
     function bindVisorCanvasEvents(canvasEl, allowRadarAim) {
       if (!canvasEl) return;
       canvasEl.addEventListener('mousedown', (e) => {
+        if (state.laserResultActive && canvasEl._libsCloseBounds) {
+          const rect = canvasEl.getBoundingClientRect();
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+          const b = canvasEl._libsCloseBounds;
+          if (mx >= b.x - 6 && mx <= b.x + b.w + 6 && my >= b.y - 6 && my <= b.y + b.h + 6) {
+            state.laserResultActive = false;
+            requestRedraw();
+            return;
+          }
+        }
         if (allowRadarAim && !state.hudDecluttered && aimFromNadirRadar(canvasEl, e.clientX, e.clientY)) {
           isAimingRadar = true;
           return;
@@ -1153,19 +1173,26 @@
         { passive: false }
       );
 
-      // Mobile / iPhone touch drag & double-tap laser support inside 3D Visor
+      // Mobile / iPhone touch drag, LIBS card close & double-tap laser support inside 3D Visor
       let lastTapMs = 0;
       canvasEl.addEventListener(
         'touchstart',
         (e) => {
           if (e.touches.length === 1) {
+            const rect = canvasEl.getBoundingClientRect();
+            const tx = e.touches[0].clientX - rect.left;
+            const ty = e.touches[0].clientY - rect.top;
+            if (state.laserResultActive && canvasEl._libsCloseBounds) {
+              const cb = canvasEl._libsCloseBounds;
+              if (tx >= cb.x && tx <= cb.x + cb.w && ty >= cb.y && ty <= cb.y + cb.h) {
+                state.laserResultActive = false;
+                requestRedraw();
+                return;
+              }
+            }
             const now = Date.now();
             if (now - lastTapMs < 290) {
-              const rect = canvasEl.getBoundingClientRect();
-              fireLaserAt(
-                (e.touches[0].clientX - rect.left) / Math.max(1, rect.width),
-                (e.touches[0].clientY - rect.top) / Math.max(1, rect.height)
-              );
+              fireLaserAt(tx / Math.max(1, rect.width), ty / Math.max(1, rect.height));
               lastTapMs = 0;
               return;
             }
@@ -1419,21 +1446,80 @@
       dirty = true;
     }
 
-    // Hands-Free Gaze-Dwell Targeter for DIY iPhone 3D VR Goggles Mode
+    // Auto-clear LIBS overlay card in 3D Goggles after 6.5s so stereo vision stays unobstructed
+    if (
+      state.vrGogglesMode &&
+      state.laserResultActive &&
+      state.laserPulseFrames <= 0 &&
+      state.laserFiredAtMs &&
+      Date.now() - state.laserFiredAtMs > 6500
+    ) {
+      state.laserResultActive = false;
+      dirty = true;
+    }
+
+    // Target-Locked Hands-Free Gaze-Dwell Laser (only charges when aimed onto a Science/CapCom Target!)
     if (state.activeMode === 'visor' && (state.vrGogglesMode || state.gyroActive)) {
       if (gazeCooldownSec > 0) {
         gazeCooldownSec = Math.max(0, gazeCooldownSec - dtSec);
         state.gazeDwellProgress = 0;
       } else if (state.laserPulseFrames <= 0) {
+        const theater = window.ARES_THEATERS[state.theaterKey];
+        const wp = (theater && theater.waypoints[state.selectedWaypointIdx]) || { arPins: [] };
+        const heading = (((state.hudYawDeg || 0) % 360) + 360) % 360;
+        let lockedKey = null;
+
+        if (state.capcomTarget) {
+          const curPos = getCrewCurrentMapPos();
+          const dxM = (state.capcomTarget.nx - curPos.nx) * 1600;
+          const dyM = (state.capcomTarget.ny - curPos.ny) * 1088;
+          const cBrg =
+            Math.hypot(dxM, dyM) > 1
+              ? ((Math.atan2(dxM, -dyM) * 180) / Math.PI + 360) % 360
+              : state.capcomTarget.bearingDeg || 110;
+          const diff = Math.abs(((cBrg - heading + 540) % 360) - 180);
+          if (diff < 11) lockedKey = 'capcom_' + (state.capcomTarget.label || 'tgt');
+        }
+
+        if (
+          !lockedKey &&
+          !state.hideArPins &&
+          !state.customHudImage &&
+          (state.visorSourceMode === 'pano' || state.visorSourceMode === 'butler360')
+        ) {
+          const pinYaws =
+            state.visorSourceMode === 'butler360'
+              ? [68, 112, 164, 292]
+              : (wp.arPins || []).map((p) => p.yawDeg);
+          for (let i = 0; i < pinYaws.length; i++) {
+            const diff = Math.abs(((pinYaws[i] - heading + 540) % 360) - 180);
+            if (diff < 11) {
+              lockedKey = `pin_${state.visorSourceMode}_${wp.code}_${i}`;
+              break;
+            }
+          }
+        }
+
+        if (lockedKey && lockedKey === state._lastGazeFiredKey) {
+          // Already assayed this target; wait until user looks away before re-arming
+          lockedKey = null;
+        } else if (!lockedKey && state._lastGazeFiredKey) {
+          // Reset lock memory once user looks >14° away
+          const dAway = Math.abs(((state.hudYawDeg - lastGazeYaw + 540) % 360) - 180);
+          if (dAway > 14) state._lastGazeFiredKey = null;
+        }
+
         const dYaw = Math.abs(((state.hudYawDeg - lastGazeYaw + 540) % 360) - 180);
         const dPitch = Math.abs(state.hudPitchOffset - lastGazePitch);
-        if (dYaw < 1.8 && dPitch < 0.04) {
-          state.gazeDwellProgress = (state.gazeDwellProgress || 0) + dtSec / 2.2;
+        if (lockedKey && dYaw < 2.2 && dPitch < 0.05) {
+          state.gazeDwellProgress = (state.gazeDwellProgress || 0) + dtSec / 2.0;
           dirty = true;
           broadcastVisorTelemetry();
           if (state.gazeDwellProgress >= 1.0) {
             state.gazeDwellProgress = 0;
-            gazeCooldownSec = 4.0;
+            gazeCooldownSec = 3.5;
+            state._lastGazeFiredKey = lockedKey;
+            lastGazeYaw = state.hudYawDeg;
             fireLaserAt(0.5, 0.5);
           }
         } else {
@@ -2965,12 +3051,53 @@
       broadcastVisorTelemetry();
       requestRedraw();
     },
+    setDockTab(tab) {
+      state.dockTab = tab;
+      const pStation = document.getElementById('dockPanelStation');
+      const pSuit = document.getElementById('dockPanelSuit');
+      const bStation = document.getElementById('btnDockTabStation');
+      const bSuit = document.getElementById('btnDockTabSuit');
+      const isStation = tab !== 'suit';
+      if (pStation) pStation.classList.toggle('hidden', !isStation);
+      if (pSuit) pSuit.classList.toggle('hidden', isStation);
+      if (bStation) {
+        bStation.className = isStation
+          ? 'flex-1 py-1.5 rounded-md bg-orange-600 text-white font-mono-tech text-[10.5px] font-extrabold transition text-center'
+          : 'flex-1 py-1.5 rounded-md text-stone-400 hover:text-stone-200 font-mono-tech text-[10.5px] font-bold transition text-center';
+      }
+      if (bSuit) {
+        bSuit.className = !isStation
+          ? 'flex-1 py-1.5 rounded-md bg-orange-600 text-white font-mono-tech text-[10.5px] font-extrabold transition text-center'
+          : 'flex-1 py-1.5 rounded-md text-stone-400 hover:text-stone-200 font-mono-tech text-[10.5px] font-bold transition text-center';
+      }
+      if (!isStation) {
+        ensureDefault3dViewersMounted();
+      }
+    },
+    toggleArPins() {
+      state.hideArPins = !state.hideArPins;
+      const btn = document.getElementById('btnVisorPins');
+      if (btn) {
+        btn.textContent = state.hideArPins ? 'AR PINS: OFF' : 'AR PINS: ON';
+        btn.classList.toggle('bg-emerald-600/25', !state.hideArPins);
+        btn.classList.toggle('text-emerald-300', !state.hideArPins);
+        btn.classList.toggle('border-emerald-500/50', !state.hideArPins);
+        btn.classList.toggle('bg-[#1c1917]', state.hideArPins);
+        btn.classList.toggle('text-stone-400', state.hideArPins);
+        btn.classList.toggle('border-[#3f3a36]', state.hideArPins);
+      }
+      requestRedraw();
+    },
     recenterVisor() {
       const theater = window.ARES_THEATERS[state.theaterKey];
       const wp = (theater && theater.waypoints[state.selectedWaypointIdx]) || { hudHeadingDeg: 110 };
       if (typeof state._rawCompassHeading === 'number') {
         state.gyroYawOffset = (wp.hudHeadingDeg - state._rawCompassHeading + 360) % 360;
       }
+      if (typeof state._rawPitchVal === 'number') {
+        state.gyroPitchZero = state._rawPitchVal;
+      }
+      state._gyroCalibrated = true;
       state.hudYawDeg = wp.hudHeadingDeg;
       state.hudPitchOffset = 0;
       broadcastVisorTelemetry();
@@ -2978,11 +3105,22 @@
       requestRedraw();
     },
     toggleVrGogglesMode() {
-      state.vrGogglesMode = !state.vrGogglesMode;
+      const enteringVr = !state.vrGogglesMode;
+
+      // CRITICAL iOS Safari requirement: request IMU permission synchronously inside the tap gesture!
+      if (enteringVr && !state.gyroActive) {
+        window.ARES_APP.toggleGyroTracking(true);
+      }
+
+      state.vrGogglesMode = enteringVr;
+      const topHeader = document.getElementById('appTopHeader');
+      const bottomDeck = document.getElementById('visorBottomDeck');
       const topCard = document.getElementById('visorTopLeftCard');
       const vrControls = document.getElementById('vrOverlayControls');
       const vrBtn = document.getElementById('btnVrGoggles');
 
+      if (topHeader) topHeader.classList.toggle('hidden', state.vrGogglesMode);
+      if (bottomDeck) bottomDeck.classList.toggle('hidden', state.vrGogglesMode);
       if (topCard) topCard.classList.toggle('hidden', state.vrGogglesMode);
       if (vrControls) vrControls.classList.toggle('hidden', !state.vrGogglesMode);
       if (vrBtn) {
@@ -2992,11 +3130,9 @@
       }
 
       if (state.vrGogglesMode) {
-        // Default to the 29,517px 360° Butler Landing panorama if currently on a static close-up
         if (state.visorSourceMode !== 'pano' && state.visorSourceMode !== 'butler360') {
           window.ARES_APP.setVisorSource('butler360');
         }
-        // Request Screen Wake Lock so iPhone display never dims inside DIY goggles
         if (navigator.wakeLock && navigator.wakeLock.request) {
           navigator.wakeLock
             .request('screen')
@@ -3005,12 +3141,11 @@
             })
             .catch(() => {});
         }
-        // Automatically request fullscreen on mobile/iPhone for immersive goggle optics
         if (document.documentElement.requestFullscreen && window.innerWidth < 1024) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
         speakSuitVoice(
-          'Stereoscopic 3D Visor Goggle mode active. Insert device into binocular magnifying visor. Hold gaze steady on any rock for 2 seconds to fire SuperCam laser.'
+          'Stereoscopic 3D Visor Goggles active with IMU head tracking. Aim crosshair at any science target for 2 seconds to fire laser.'
         );
       } else {
         if (state._wakeLock && state._wakeLock.release) {
@@ -3024,96 +3159,212 @@
       broadcastVisorTelemetry();
       requestRedraw();
     },
-    toggleGyroTracking() {
-      const enableGyroListener = () => {
-        state.gyroActive = !state.gyroActive;
+    toggleGyroTracking(forceEnable) {
+      const syncGyroButtons = (deniedOrInsecureMsg) => {
         const gBtn = document.getElementById('btnGyroTrack');
+        const vrGyroBtn = document.getElementById('btnVrGyroOverlay');
         if (gBtn) {
-          gBtn.textContent = state.gyroActive ? 'GYRO: ON' : 'GYRO TRACK';
+          gBtn.textContent = deniedOrInsecureMsg
+            ? deniedOrInsecureMsg
+            : state.gyroActive
+            ? 'GYRO: ON'
+            : 'GYRO TRACK';
           gBtn.classList.toggle('bg-amber-500', state.gyroActive);
           gBtn.classList.toggle('text-stone-950', state.gyroActive);
           gBtn.classList.toggle('bg-[#1c1917]', !state.gyroActive);
           gBtn.classList.toggle('text-amber-300', !state.gyroActive);
         }
+        if (vrGyroBtn) {
+          vrGyroBtn.textContent = deniedOrInsecureMsg
+            ? deniedOrInsecureMsg
+            : state.gyroActive
+            ? '🎯 GYRO: ON'
+            : '🎯 ENABLE GYRO';
+          vrGyroBtn.classList.toggle('border-emerald-400', state.gyroActive);
+          vrGyroBtn.classList.toggle('text-emerald-300', state.gyroActive);
+          vrGyroBtn.classList.toggle('border-amber-400/70', !state.gyroActive);
+          vrGyroBtn.classList.toggle('text-amber-300', !state.gyroActive);
+        }
+      };
+
+      const enableGyroListener = () => {
+        state.gyroActive = forceEnable === true ? true : !state.gyroActive;
+        if (state.gyroActive) {
+          state._gyroCalibrated = false;
+        }
+        syncGyroButtons(null);
 
         if (state.gyroActive && !state._gyroBound) {
           state._gyroBound = true;
           let lastMotionMs = 0;
+          let lastOrientEventMs = 0;
 
-          window.addEventListener('deviceorientation', (ev) => {
+          // Gimbal-lock-free 3D Camera Look-Vector [0, 0, -1] via W3C Z(alpha)-X'(beta)-Y''(gamma) rotation matrix!
+          // Works identically across Portrait, Landscape-Left, Landscape-Right, and across vertical horizon!
+          const onOrientation = (ev) => {
             if (!state.gyroActive) return;
-            const scrAngle =
-              (window.screen &&
-                window.screen.orientation &&
-                typeof window.screen.orientation.angle === 'number'
-                ? window.screen.orientation.angle
-                : window.orientation) || 0;
+            if (typeof ev.beta !== 'number' || typeof ev.gamma !== 'number') return;
 
-            let heading = null;
-            if (typeof ev.webkitCompassHeading === 'number') {
-              heading = (ev.webkitCompassHeading + scrAngle + 360) % 360;
-            } else if (typeof ev.alpha === 'number') {
-              heading = (360 - ev.alpha + scrAngle + 360) % 360;
+            const alphaDeg =
+              typeof ev.alpha === 'number'
+                ? ev.alpha
+                : typeof ev.webkitCompassHeading === 'number'
+                ? (360 - ev.webkitCompassHeading) % 360
+                : null;
+            if (alphaDeg === null) return;
+
+            lastOrientEventMs = performance.now();
+            const deg2rad = Math.PI / 180;
+            const a = alphaDeg * deg2rad;
+            const b = ev.beta * deg2rad;
+            const g = ev.gamma * deg2rad;
+
+            const cosA = Math.cos(a);
+            const sinA = Math.sin(a);
+            const cosB = Math.cos(b);
+            const sinB = Math.sin(b);
+            const cosG = Math.cos(g);
+            const sinG = Math.sin(g);
+
+            // World-frame look vector R * [0, 0, -1]^T
+            const fx = -cosA * sinG - sinA * sinB * cosG;
+            const fy = -sinA * sinG + cosA * sinB * cosG;
+            const fz = -cosB * cosG;
+
+            const horizMag = Math.hypot(fx, fy);
+            let rawHeading = state._rawCompassHeading;
+            if (horizMag > 0.08) {
+              rawHeading = ((Math.atan2(fx, fy) * 180) / Math.PI + 360) % 360;
+              state._rawCompassHeading = rawHeading;
             }
-            if (heading !== null) {
-              state._rawCompassHeading = heading;
-              const targetYaw = (heading + (state.gyroYawOffset || 0) + 360) % 360;
-              // Smooth low-pass angular interpolation to eliminate compass jitter
+
+            const rawPitch = Math.asin(Math.max(-0.98, Math.min(0.98, fz))) * 0.62;
+            state._rawPitchVal = rawPitch;
+
+            // Auto-zero initial head orientation to active station heading so view starts dead-ahead!
+            if (!state._gyroCalibrated && typeof rawHeading === 'number') {
+              const theater = window.ARES_THEATERS[state.theaterKey];
+              const wp =
+                (theater && theater.waypoints[state.selectedWaypointIdx]) || { hudHeadingDeg: 110 };
+              state.gyroYawOffset = (wp.hudHeadingDeg - rawHeading + 360) % 360;
+              state.gyroPitchZero = rawPitch * 0.5;
+              state._gyroCalibrated = true;
+            }
+
+            if (typeof rawHeading === 'number') {
+              const targetYaw = (rawHeading + (state.gyroYawOffset || 0) + 360) % 360;
               const diff = ((targetYaw - state.hudYawDeg + 540) % 360) - 180;
-              state.hudYawDeg = (state.hudYawDeg + diff * 0.35 + 360) % 360;
+              state.hudYawDeg = (state.hudYawDeg + diff * 0.48 + 360) % 360;
             }
 
-            const isLandscape = Math.abs(scrAngle) === 90 || window.innerWidth > window.innerHeight;
-            if (isLandscape && typeof ev.gamma === 'number') {
-              const sign = scrAngle === -90 || scrAngle === 270 ? -1 : 1;
-              const absG = Math.abs(ev.gamma);
-              const tilt = ((absG - 72) / 85) * (ev.gamma < 0 ? sign : -sign);
-              state.hudPitchOffset = Math.max(-0.32, Math.min(0.32, state.hudPitchOffset * 0.65 + tilt * 0.35));
-            } else if (typeof ev.beta === 'number') {
-              const tilt = (68 - ev.beta) / 90;
-              state.hudPitchOffset = Math.max(-0.32, Math.min(0.32, state.hudPitchOffset * 0.65 + tilt * 0.35));
-            }
-            broadcastVisorTelemetry();
-            requestRedraw();
-          });
-
-          // High-rate angular velocity integration fallback via DeviceMotion rotationRate
-          window.addEventListener('devicemotion', (ev) => {
-            if (!state.gyroActive || !ev.rotationRate) return;
-            const now = performance.now();
-            const dt = lastMotionMs ? Math.min(0.08, (now - lastMotionMs) / 1000) : 0;
-            lastMotionMs = now;
-            if (dt <= 0 || state._rawCompassHeading !== null) return;
-            const isLandscape = window.innerWidth > window.innerHeight;
-            const yawRate = isLandscape ? ev.rotationRate.alpha || 0 : ev.rotationRate.beta || 0;
-            const pitchRate = isLandscape ? ev.rotationRate.beta || 0 : ev.rotationRate.alpha || 0;
-            state.hudYawDeg = (state.hudYawDeg - yawRate * dt + 360) % 360;
-            state.hudPitchOffset = Math.max(
-              -0.32,
-              Math.min(0.32, state.hudPitchOffset + pitchRate * dt * 0.008)
+            // Positive fz = looking UP at Martian sky => positive hudPitchOffset shifts panorama down to reveal sky
+            const targetPitch = Math.max(
+              -0.34,
+              Math.min(0.34, rawPitch - (state.gyroPitchZero || 0))
             );
+            state.hudPitchOffset =
+              state.hudPitchOffset * 0.55 + targetPitch * 0.45;
+
             broadcastVisorTelemetry();
             requestRedraw();
-          });
+          };
+
+          window.addEventListener('deviceorientation', onOrientation, true);
+          let lastStandardOrientMs = 0;
+          window.addEventListener(
+            'deviceorientation',
+            (ev) => {
+              if (typeof ev.alpha === 'number') lastStandardOrientMs = performance.now();
+            },
+            true
+          );
+          window.addEventListener(
+            'deviceorientationabsolute',
+            (ev) => {
+              if (performance.now() - lastStandardOrientMs > 400) {
+                onOrientation(ev);
+              }
+            },
+            true
+          );
+
+          // High-rate 60Hz angular-velocity gyroscope fallback when DeviceOrientation is unavailable
+          window.addEventListener(
+            'devicemotion',
+            (ev) => {
+              if (!state.gyroActive || !ev.rotationRate) return;
+              const now = performance.now();
+              const dt = lastMotionMs ? Math.min(0.08, (now - lastMotionMs) / 1000) : 0;
+              lastMotionMs = now;
+              if (dt <= 0 || now - lastOrientEventMs < 260) return;
+
+              const scrAngle =
+                (window.screen &&
+                  window.screen.orientation &&
+                  typeof window.screen.orientation.angle === 'number'
+                  ? window.screen.orientation.angle
+                  : window.orientation) || 0;
+
+              const rBeta = ev.rotationRate.beta || 0;   // deg/s around device X (portrait left->right)
+              const rGamma = ev.rotationRate.gamma || 0; // deg/s around device Y (portrait bottom->top)
+
+              let yawRate = 0;
+              let pitchRate = 0;
+              if (scrAngle === 90) {
+                yawRate = rBeta;
+                pitchRate = rGamma;
+              } else if (scrAngle === -90 || scrAngle === 270) {
+                yawRate = -rBeta;
+                pitchRate = -rGamma;
+              } else {
+                yawRate = -rGamma;
+                pitchRate = rBeta;
+              }
+
+              if (Math.abs(yawRate) < 0.25 && Math.abs(pitchRate) < 0.25) return;
+              state.hudYawDeg = (state.hudYawDeg + yawRate * dt + 360) % 360;
+              state.hudPitchOffset = Math.max(
+                -0.34,
+                Math.min(0.34, state.hudPitchOffset + pitchRate * dt * 0.011)
+              );
+              broadcastVisorTelemetry();
+              requestRedraw();
+            },
+            true
+          );
         }
 
-        if (state.gyroActive) {
-          speakSuitVoice('Gyroscope and compass head-tracking active.');
+        if (state.gyroActive && forceEnable !== true) {
+          speakSuitVoice('Gyroscope 3D head-tracking active.');
         }
         requestRedraw();
       };
 
-      // iOS 13+ Safari requires explicit permission from a user tap gesture (available on HTTPS / localhost)
+      if (state.gyroActive && forceEnable !== true) {
+        enableGyroListener();
+        return;
+      }
+
+      if (
+        typeof window.isSecureContext === 'boolean' &&
+        !window.isSecureContext &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1'
+      ) {
+        syncGyroButtons('HTTPS NEEDED');
+        speakSuitVoice('Mobile browsers require an HTTPS connection to unlock gyroscope sensors.');
+        return;
+      }
+
+      // iOS 13+ Safari requires explicit synchronous permission request inside user tap gesture
       const reqPromises = [];
       if (
-        !state.gyroActive &&
         typeof DeviceOrientationEvent !== 'undefined' &&
         typeof DeviceOrientationEvent.requestPermission === 'function'
       ) {
         reqPromises.push(DeviceOrientationEvent.requestPermission().catch(() => 'denied'));
       }
       if (
-        !state.gyroActive &&
         typeof DeviceMotionEvent !== 'undefined' &&
         typeof DeviceMotionEvent.requestPermission === 'function'
       ) {
@@ -3125,7 +3376,8 @@
           if (results.includes('granted')) {
             enableGyroListener();
           } else {
-            enableGyroListener();
+            state.gyroActive = false;
+            syncGyroButtons('ALLOW MOTION');
           }
         });
       } else {

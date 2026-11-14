@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARES-NAV // Martian Orbital &amp; Surface GPS Navigation System</title>
+  <script src="js/vendor/tailwindcss.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    (function () {
+      var s = document.createElement('script');
+      s.type = 'module';
+      s.src =
+        window.location.protocol === 'file:'
+          ? 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js'
+          : 'js/vendor/model-viewer.min.js';
+      document.head.appendChild(s);
+    })();
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* Deep Space Starfield Background for 360° Planet Mars View */
+    .space-starfield {
+      background-color: #080706;
+      background-image:
+        radial-gradient(1px 1px at 12% 24%, rgba(255,255,255,0.75) 50%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 38% 14%, rgba(255,255,255,0.6) 50%, transparent 100%),
+        radial-gradient(1px 1px at 66% 78%, rgba(255,255,255,0.7) 50%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 84% 32%, rgba(251,146,60,0.65) 50%, transparent 100%),
+        radial-gradient(1px 1px at 22% 82%, rgba(255,255,255,0.5) 50%, transparent 100%),
+        radial-gradient(1px 1px at 91% 68%, rgba(255,255,255,0.7) 50%, transparent 100%);
+      background-size: 420px 320px;
+    }
+
+    /* Cinematic 3D Perspective Telemetry Wall */
+    .mars-holo-wall {
+      transform: perspective(1050px) rotateY(-14deg) rotateX(2deg);
+      transform-origin: right center;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen w-screen overflow-hidden bg-[#0c0a09] text-stone-100">
+
+  <!-- ========================================================================
+       TOP COMMAND & GPS NAVIGATION BAR (WARM CARBON & AEROSPACE ORANGE)
+       ======================================================================== -->
+  <header class="h-14 bg-[#141210] border-b border-[#292524] px-3 flex items-center justify-between gap-2 flex-shrink-0 z-30 overflow-hidden">
+    <!-- Left: Tightly-Cropped High-Contrast Logo + Compact GPS Sector Selector -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <img
+        src="assets/optimized/logo_dark_hud.webp"
+        alt="Interplanetary Explorers Logo"
+        class="h-8 xl:h-9 w-auto object-contain drop-shadow-[0_0_8px_rgba(249,115,22,0.3)]"
+      />
+      <div class="h-6 w-px bg-[#292524]"></div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[10px] font-mono-tech font-bold text-orange-400 uppercase tracking-wider hidden 2xl:inline">
+          SECTOR:
+        </span>
+        <select
+          id="theaterSelect"
+          onchange="window.ARES_APP.setTheater(this.value)"
+          class="max-w-[185px] 2xl:max-w-none bg-[#1c1917] text-stone-100 font-mono-tech text-[11px] font-bold px-2 py-1 rounded-lg border border-[#3f3a36] focus:outline-none focus:border-orange-500 cursor-pointer truncate"
+        >
+          <option value="jezero">Jezero Crater — Site 093 (M2020)</option>
+          <option value="gale">Gale Crater — Boxwork (PIA26696)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Center: 4-Mode Astronaut GPS Switcher (Keys 1, 2, 3, 4) -->
+    <nav class="flex items-center gap-1 bg-[#0c0a09] p-1 rounded-lg border border-[#292524] flex-shrink-0">
+      <button id="tab_globe" onclick="window.ARES_APP.setMode('globe')" class="mode-tab active">
+        <span class="font-mono-tech text-[11px] opacity-75 hidden 2xl:inline">[1]</span>
+        <span>360° Planet Mars</span>
+      </button>
+      <button id="tab_map" onclick="window.ARES_APP.setMode('map')" class="mode-tab">
+        <span class="font-mono-tech text-[11px] opacity-75 hidden 2xl:inline">[2]</span>
+        <span>Surface GPS Map</span>
+      </button>
+      <button id="tab_visor" onclick="window.ARES_APP.setMode('visor')" class="mode-tab">
+        <span class="font-mono-tech text-[11px] opacity-75 hidden 2xl:inline">[3]</span>
+        <span>360° Visor HUD</span>
+      </button>
+      <button id="tab_science" onclick="window.ARES_APP.setMode('science')" class="mode-tab">
+        <span class="font-mono-tech text-[11px] opacity-75 hidden 2xl:inline">[4]</span>
+        <span>Science Log</span>
+        <span id="sampleCountBadge" class="ml-0.5 px-1.5 py-0.2 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/40 font-mono-tech text-[10px]">2</span>
+      </button>
+    </nav>
+
+    <!-- Right: Judge Tour + CapCom Sync + High-Contrast Audio, Suit Voice, Hands-Free Mic & Telemetry -->
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <button
+        id="btnJudgeTour"
+        onclick="window.ARES_APP.startJudgeTour()"
+        class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-mono-tech text-[10.5px] font-extrabold shadow-[0_0_14px_rgba(249,115,22,0.45)] transition flex items-center gap-1"
+        title="Launch the interactive 5-step narrated Mission Demo & Judge Walkthrough"
+      >
+        <span>&#9654;</span>
+        <span>JUDGE TOUR</span>
+      </button>
+
+      <button
+        id="btnCapcomModal"
+        onclick="window.ARES_APP.openCapcomModal()"
+        class="px-2 py-1.5 rounded-lg bg-[#1c1917] hover:bg-[#292524] border border-orange-500/60 text-orange-300 font-mono-tech text-[10.5px] font-extrabold transition flex items-center gap-1.5"
+        title="CapCom Live Wi-Fi Telemetry Sync — Pair DIY iPhone 3D Visor Goggles via QR Code"
+      >
+        <span id="capcomLinkDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span>CAPCOM</span>
+      </button>
+
+      <div class="flex items-center gap-1 bg-[#1c1917] border border-[#292524] px-2 py-1 rounded-lg font-mono-tech text-[11px]">
+        <button
+          id="btnMarsAudio"
+          onclick="window.ARES_APP.toggleMarsAudio()"
+          class="px-1.5 py-0.5 rounded bg-[#292524] hover:bg-[#3f3a36] border border-[#44403c] text-amber-300 font-bold text-[10px] transition"
+          title="Play Perseverance SuperCam Microphone Martian Wind Recording"
+        >
+          AUDIO
+        </button>
+        <button
+          id="btnSuitVoice"
+          onclick="window.ARES_APP.toggleSuitVoice()"
+          class="px-1.5 py-0.5 rounded bg-[#292524] hover:bg-[#3f3a36] border border-[#44403c] text-stone-100 font-bold text-[10px] transition"
+          title="Toggle xEVA Synthesized Suit Tactical Voice Advisories"
+        >
+          VOICE
+        </button>
+        <button
+          id="btnVoiceCmd"
+          onclick="window.ARES_APP.toggleVoiceCommands()"
+          class="px-1.5 py-0.5 rounded bg-[#292524] hover:bg-[#3f3a36] border border-[#44403c] text-orange-300 font-bold text-[10px] transition"
+          title="Hands-Free Astronaut Voice Commands (Say: '3D Terrain', 'Fly Route', 'Synthetic Vision', 'Micro Lab', 'Fire Laser', 'Emergency')"
+        >
+          MIC
+        </button>
+        <span class="text-stone-600 hidden 2xl:inline">|</span>
+        <span id="hdrSolBadge" class="text-amber-400 font-bold hidden 2xl:inline">SOL 2023</span>
+        <span class="text-stone-600">•</span>
+        <span id="hdrO2Badge" class="text-stone-100 font-bold">O₂ 86%</span>
+        <span class="text-stone-600 hidden 2xl:inline">•</span>
+        <span id="hdrRadBadge" class="text-emerald-400 font-bold hidden 2xl:inline">0.021 mSv/hr</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- DOCKED GUIDED MISSION DEMO / JUDGE WALKTHROUGH BANNER (Zero horizontal scroll!) -->
+  <div id="judgeTourBanner" class="hidden h-11 bg-[#1c1510] border-b border-orange-500/70 px-4 flex items-center justify-between gap-4 flex-shrink-0 z-30 overflow-hidden">
+    <div class="flex items-center gap-2.5 font-mono-tech min-w-0 flex-1 overflow-hidden">
+      <span id="tourStepBadge" class="px-2 py-0.5 rounded bg-orange-600 text-white text-[10px] font-extrabold flex-shrink-0">
+        STAGE 1 / 5
+      </span>
+      <span id="tourStepTitle" class="text-xs font-extrabold text-amber-300 truncate">
+        Orbital Constellation Lock &amp; Descent to Jezero Crater
+      </span>
+      <span class="text-stone-500 hidden lg:inline flex-shrink-0">—</span>
+      <span id="tourStepDesc" class="text-xs text-stone-300 hidden lg:inline truncate">
+        Locking onto MRO, Odyssey &amp; MAVEN relay satellites above Neretva Vallis.
+      </span>
+    </div>
+    <div class="flex items-center gap-1.5 font-mono-tech text-[11px] flex-shrink-0">
+      <button
+        onclick="window.ARES_APP.prevTourStep()"
+        class="px-2.5 py-1 rounded bg-[#292524] hover:bg-[#3f3a36] text-stone-200 font-bold transition"
+      >
+        &larr; PREV
+      </button>
+      <button
+        id="btnTourAuto"
+        onclick="window.ARES_APP.toggleTourAutoPlay()"
+        class="px-2.5 py-1 rounded bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/60 text-emerald-300 font-bold transition"
+      >
+        &#9654; AUTO
+      </button>
+      <button
+        onclick="window.ARES_APP.nextTourStep()"
+        class="px-2.5 py-1 rounded bg-orange-600 hover:bg-orange-500 text-white font-extrabold transition"
+      >
+        NEXT &rarr;
+      </button>
+      <button
+        onclick="window.ARES_APP.stopJudgeTour()"
+        class="px-2.5 py-1 rounded bg-red-950/80 hover:bg-red-700 text-red-200 border border-red-500/60 font-bold transition"
+      >
+        &#10005; EXIT
+      </button>
+    </div>
+  </div>
+
+  <!-- DOCKED MASTER CAUTION // EMERGENCY EVA ABORT BANNER (Zero horizontal scroll!) -->
+  <div id="masterCautionBanner" class="hidden h-10 bg-red-950/90 border-b border-red-500 px-4 flex items-center justify-between gap-4 flex-shrink-0 z-30 overflow-hidden">
+    <div class="flex items-center gap-2.5 font-mono-tech text-xs min-w-0 flex-1 overflow-hidden">
+      <span class="px-2 py-0.5 rounded bg-red-600 text-white font-extrabold animate-pulse flex-shrink-0">
+        &#9888; MASTER CAUTION
+      </span>
+      <span id="cautionStatusText" class="text-red-200 font-bold truncate">
+        SUIT O₂ REGULATOR LEAK + SOLAR SEP EVENT • DIVERTING TO WP-03 SHELTER &amp; HAB-01
+      </span>
+    </div>
+    <div class="flex items-center gap-2.5 font-mono-tech text-xs flex-shrink-0">
+      <span id="cautionTimerBadge" class="text-amber-300 font-extrabold">O₂: 42%</span>
+      <button
+        onclick="window.ARES_APP.toggleEmergencyAbort()"
+        class="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold transition"
+      >
+        &#10003; RESET NOMINAL
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODE 1: 360° ULTRA-REALISTIC PLANET MARS & ORBITAL GPS CONSTELLATION
+       ======================================================================== -->
+  <main id="view_globe" class="flex-1 relative space-starfield overflow-hidden flex items-center justify-between">
+    <canvas id="globeWebglCanvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+    <canvas id="globeHudCanvas" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+    <!-- Top-Left Planetary Controls -->
+    <div class="relative z-10 self-start m-6 hud-glass rounded-xl p-4 w-80 pointer-events-auto">
+      <div class="flex items-center justify-between border-b border-[#292524] pb-2 mb-2.5">
+        <span class="font-mono-tech text-[11px] font-bold uppercase text-orange-400">
+          MARS ORBITAL GPS CONSTELLATION
+        </span>
+        <span class="w-2 h-2 rounded-full bg-orange-500 animate-ping"></span>
+      </div>
+      <p class="text-xs text-stone-300 leading-relaxed mb-3">
+        Drag the 3D globe in 360° or click any surface landing beacon to descend into high-precision EVA surface navigation.
+      </p>
+      <div class="flex gap-1.5 mb-3">
+        <button
+          id="btnGlobeMola"
+          onclick="window.ARES_APP.toggleGlobeMola()"
+          class="flex-1 py-2 px-2.5 rounded-lg text-[11px] font-mono-tech font-bold bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] text-amber-300 whitespace-nowrap transition"
+        >
+          8K TRUE-COLOR
+        </button>
+        <button
+          id="btnGlobeSpin"
+          onclick="window.ARES_APP.toggleGlobeSpin()"
+          class="py-2 px-2.5 rounded-lg text-[11px] font-mono-tech font-semibold bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] text-stone-300 whitespace-nowrap transition"
+        >
+          PAUSE ROTATION
+        </button>
+      </div>
+      <div>
+        <div class="flex justify-between font-mono-tech text-[10px] text-stone-400 mb-1">
+          <span>SOLAR TERMINATOR ANGLE</span>
+          <span class="text-amber-400">DAY / NIGHT</span>
+        </div>
+        <input
+          type="range"
+          min="-2.5"
+          max="2.5"
+          step="0.05"
+          value="0.65"
+          oninput="window.ARES_APP.setSunAngle(this.value)"
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    <!-- Right-Side Cinematic 3D Planetary Telemetry Wall -->
+    <div class="relative z-10 mr-10 hidden lg:flex items-center gap-6 pointer-events-auto mars-holo-wall bg-[#12100e]/85 backdrop-blur-md border border-[#2e2a27] rounded-2xl p-7 shadow-2xl">
+      <div class="flex flex-col items-center justify-between py-2 pr-4 border-r border-[#2e2a27] select-none">
+        <span class="font-mono-tech text-4xl font-extrabold tracking-widest text-stone-100">M</span>
+        <span class="font-mono-tech text-4xl font-extrabold tracking-widest text-stone-100 mt-3">A</span>
+        <span class="font-mono-tech text-4xl font-extrabold tracking-widest text-stone-100 mt-3">R</span>
+        <span class="font-mono-tech text-4xl font-extrabold tracking-widest text-stone-100 mt-3">S</span>
+      </div>
+
+      <div class="flex flex-col gap-3 font-mono-tech">
+        <div class="grid grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">DIAMETER</div>
+          <div class="text-stone-100 font-bold">6,794 KM [53% OF EARTH]</div>
+
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">ROTATION PERIOD</div>
+          <div class="text-stone-100 font-bold">24 hrs, 37 min, 22 sec</div>
+
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">ORBITAL PERIOD</div>
+          <div class="text-stone-100 font-bold">687 Earth Days (668.6 Sols)</div>
+
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">MASS</div>
+          <div class="text-stone-100 font-bold">0.107 Earth Mass</div>
+
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">GRAVITY</div>
+          <div class="text-orange-400 font-bold">0.38 G (3.711 m/s²)</div>
+
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">ATMOSPHERIC PRESSURE</div>
+          <div class="text-amber-400 font-bold">0.64 kPa (95.3% CO₂)</div>
+
+          <div class="text-stone-400 uppercase tracking-wider text-[11px]">SURFACE TEMPERATURE</div>
+          <div class="text-stone-100 font-bold">-19.8°C Day / -78.2°C Night</div>
+        </div>
+
+        <div class="h-px bg-[#292524] my-1"></div>
+
+        <div class="text-[10px] text-orange-400 uppercase font-bold tracking-wider">
+          SELECT ACTIVE EVA GPS LANDING SECTOR TO DESCEND:
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button
+            onclick="window.ARES_APP.descendToSector('gale')"
+            class="p-2.5 rounded-xl bg-orange-600/15 hover:bg-orange-600/30 border border-orange-500/70 text-left transition"
+          >
+            <div class="text-xs font-extrabold text-white">GALE CRATER [DESCEND &rarr;]</div>
+            <div class="text-[10px] text-orange-300 mt-0.5">Mount Sharp Boxwork • 5.08°S, 137.85°E</div>
+          </button>
+          <button
+            onclick="window.ARES_APP.descendToSector('jezero')"
+            class="p-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/70 text-left transition"
+          >
+            <div class="text-xs font-extrabold text-white">JEZERO CRATER [DESCEND &rarr;]</div>
+            <div class="text-[10px] text-amber-300 mt-0.5">Neretva Vallis Site 093 • 18.44°N, 77.23°E</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================
+       MODE 2: SURFACE GPS MAP (STRUCTURED DOCKED TOOLBARS • ZERO OVERLAP)
+       ======================================================================== -->
+  <main id="view_map" class="hidden flex-1 flex overflow-hidden">
+
+    <!-- Left/Center Column: Docked Top GPS Bar + Unobstructed Map Canvas + Docked Bottom Layer Bar -->
+    <section class="flex-1 flex flex-col bg-[#0c0a09] overflow-hidden min-w-0">
+
+      <!-- DOCKED TOP GPS TOOLBAR (Never overflows or shows horizontal scrollbars!) -->
+      <div class="h-11 bg-[#141210] border-b border-[#292524] px-3 flex items-center justify-between gap-2 flex-shrink-0 overflow-hidden">
+        <!-- Left: Turn-by-Turn GPS Guidance -->
+        <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+          <span class="px-2 py-0.5 rounded bg-orange-600 text-white font-mono-tech text-[10px] font-extrabold tracking-wide flex-shrink-0">
+            GPS NAV
+          </span>
+          <span id="gpsTurnInstruction" class="font-mono-tech text-xs font-bold text-stone-100 truncate">
+            PROCEED 185m HDG 110° &rarr; WP-03 (4 MIN ETA)
+          </span>
+        </div>
+
+        <!-- Right: Tactical Map Actions + 3D Holographic Terrain + CapCom Mark + Routing Physics -->
+        <div class="flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
+          <button
+            id="btnSimWalk"
+            onclick="window.ARES_APP.toggleSimWalk()"
+            class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-emerald-500/60 text-emerald-400 font-mono-tech text-[10.5px] font-bold transition"
+            title="Start or Pause Live GPS EVA Traverse Simulation"
+          >
+            &#9654; DRIVE
+          </button>
+          <button
+            id="btnTerrain3d"
+            onclick="window.ARES_APP.toggleTerrain3d()"
+            class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-amber-500/70 text-amber-300 font-mono-tech text-[10.5px] font-bold transition"
+            title="JPL OnSight Mode: Extrude Real 100x68 MRO HiRISE / MOLA DEM into an Interactive WebGL 3D Holographic Terrain Table + Route Fly-Through"
+          >
+            3D TERRAIN
+          </button>
+          <button
+            id="btnCapcomMark"
+            onclick="window.ARES_APP.toggleCapcomMarkMode()"
+            class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-sky-400/70 text-sky-300 font-mono-tech text-[10.5px] font-bold transition"
+            title="Bi-Directional CapCom Target Marker: Click any rock outcrop on the 2D Map to project a live 3D AR Target Diamond directly inside the Astronaut's Visor / iPhone 3D Goggles!"
+          >
+            &#9670; MARK
+          </button>
+          <button
+            id="btnPlotPin"
+            onclick="window.ARES_APP.togglePlotPinMode()"
+            class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-orange-500/60 text-orange-300 font-mono-tech text-[10.5px] font-bold transition"
+            title="Click (or Double-Click anywhere on the map anytime) to drop a custom EVA waypoint; click any custom pin to delete it"
+          >
+            + PIN
+          </button>
+          <button
+            id="btnClearPins"
+            onclick="window.ARES_APP.clearCustomPins()"
+            class="hidden px-2 py-1 rounded bg-red-950/60 hover:bg-red-900/70 border border-red-500/60 text-red-200 font-mono-tech text-[10px] font-bold transition"
+          >
+            &#10005; CLEAR
+          </button>
+          <button
+            id="btnIngenuityScout"
+            onclick="window.ARES_APP.toggleIngenuityScout()"
+            class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-amber-500/60 text-amber-300 font-mono-tech text-[10.5px] font-bold transition"
+            title="Launch or Land NASA Ingenuity Coaxial Aerial Recon Helicopter"
+          >
+            SCOUT
+          </button>
+          <button
+            id="btnMap3dSandbox"
+            onclick="window.ARES_APP.toggleMap3dSandbox()"
+            class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-orange-500/60 text-orange-300 font-mono-tech text-[10.5px] font-bold transition"
+            title="Inspect Interactive 3D Models: Jezero Crater, Martian Terrain, xEMU Suit, Perseverance & Ingenuity"
+          >
+            3D MESH
+          </button>
+          <button
+            id="btnEmergencyAbort"
+            onclick="window.ARES_APP.toggleEmergencyAbort()"
+            class="px-2 py-1 rounded bg-red-950/60 hover:bg-red-700 border border-red-500/70 text-red-200 font-mono-tech text-[10.5px] font-bold transition"
+            title="Simulate Suit O2 Leak & Solar Particle Storm Emergency Abort"
+          >
+            ABORT SIM
+          </button>
+          <select
+            id="routingModeSelect"
+            onchange="window.ARES_APP.setRoutingMode(this.value)"
+            class="bg-[#1c1917] text-amber-300 font-mono-tech text-[10.5px] font-bold px-1.5 py-1 rounded border border-[#3f3a36] focus:outline-none focus:border-orange-500 cursor-pointer"
+            title="Select Pathplanner Cost Function: Suit-Physics Optimal A*, Radiation-Shielded A*, or Direct Straight-Line Baseline"
+          >
+            <option value="optimal">A* OPTIMAL</option>
+            <option value="rad_shelter">A* RAD-SHIELD</option>
+            <option value="direct">DIRECT LINE</option>
+          </select>
+          <select
+            id="basemapSelect"
+            onchange="window.ARES_APP.setBasemapVariant(this.value)"
+            class="max-w-[125px] xl:max-w-[145px] bg-[#1c1917] text-stone-100 font-mono-tech text-[10.5px] font-bold px-1.5 py-1 rounded border border-[#3f3a36] focus:outline-none focus:border-orange-500 cursor-pointer truncate"
+          ></select>
+        </div>
+      </div>
+
+      <!-- FULL-WIDTH SATELLITE MAP CANVAS + WEBGL 3D HOLOGRAPHIC TERRAIN TABLE + 3D GLB SANDBOX -->
+      <div class="flex-1 relative overflow-hidden bg-[#0c0a09] flex">
+        <div class="flex-1 relative h-full min-w-0 overflow-hidden">
+          <canvas id="gisMapCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+        </div>
+
+        <!-- JPL OnSight-Style Interactive WebGL 3D Holographic Terrain Table & Canyon Chase Camera -->
+        <div id="terrain3dOverlay" class="hidden absolute inset-0 bg-[#0c0a09] z-10 overflow-hidden">
+          <canvas id="terrain3dWebglCanvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+          <canvas id="terrain3dHudCanvas" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+          <div class="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-[#141210]/95 border border-orange-500/60 rounded-lg px-2.5 py-1.5 font-mono-tech text-[10.5px] shadow-2xl">
+            <span class="px-2 py-0.5 rounded bg-orange-600 text-white text-[9.5px] font-extrabold">ONSIGHT 3D DEM</span>
+            <button
+              id="btnFlyRoute"
+              onclick="window.ARES_APP.toggleFlyRoute()"
+              class="px-2.5 py-1 rounded bg-emerald-600/25 hover:bg-emerald-600 border border-emerald-500/70 text-emerald-300 hover:text-white font-extrabold transition"
+              title="Autonomous Low-Altitude Chase Camera Fly-Through Along Active A* Traverse"
+            >
+              &#9654; FLY ROUTE
+            </button>
+            <button
+              id="btnVertExag"
+              onclick="window.ARES_APP.cycleTerrainExag()"
+              class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] text-amber-300 font-bold transition"
+              title="Cycle Vertical Relief Exaggeration (1.0x True Scale / 2.2x Tactical / 3.4x Canyon Relief)"
+            >
+              EXAG: 2.2x
+            </button>
+            <button
+              onclick="window.ARES_APP.resetTerrainCam()"
+              class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] text-stone-200 font-bold transition"
+            >
+              &#10227; RESET CAM
+            </button>
+            <button
+              onclick="window.ARES_APP.toggleTerrain3d()"
+              class="px-2 py-1 rounded bg-red-950/70 hover:bg-red-600 border border-red-500/60 text-red-200 hover:text-white font-bold transition"
+            >
+              &#10005; 2D ORTHO
+            </button>
+          </div>
+        </div>
+
+        <!-- Full-Viewport Interactive 3D Martian Terrain, Crater, Spacesuit & Rover Sandbox -->
+        <div id="map3dSandboxOverlay" class="hidden absolute inset-0 bg-[#0c0a09] z-20 flex flex-col">
+          <div class="h-10 bg-[#181512] border-b border-[#292524] px-3 flex items-center justify-between font-mono-tech text-xs overflow-hidden gap-2 flex-shrink-0">
+            <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+              <span class="px-2 py-0.5 rounded bg-orange-600 text-white text-[10px] font-bold flex-shrink-0">3D ENGINEERING SANDBOX</span>
+              <span id="sandbox3dTitle" class="text-stone-200 font-bold truncate">Jezero Crater 3D Orbital DEM Mesh (jezero_crater_mars.glb)</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <button onclick="window.ARES_APP.set3dAsset('jezero_crater')" class="px-2.5 py-1 rounded bg-[#292524] hover:bg-orange-600 text-stone-200 hover:text-white text-[10.5px] font-bold transition">JEZERO 3D</button>
+              <button onclick="window.ARES_APP.set3dAsset('martian_terrain')" class="px-2.5 py-1 rounded bg-[#292524] hover:bg-orange-600 text-stone-200 hover:text-white text-[10.5px] font-bold transition">TERRAIN 3D</button>
+              <button onclick="window.ARES_APP.set3dAsset('xemu_suit')" class="px-2.5 py-1 rounded bg-[#292524] hover:bg-orange-600 text-stone-200 hover:text-white text-[10.5px] font-bold transition">xEMU SUIT 3D</button>
+              <button onclick="window.ARES_APP.set3dAsset('perseverance')" class="px-2.5 py-1 rounded bg-[#292524] hover:bg-orange-600 text-stone-200 hover:text-white text-[10.5px] font-bold transition">ROVER 3D</button>
+              <button onclick="window.ARES_APP.set3dAsset('ingenuity')" class="px-2.5 py-1 rounded bg-[#292524] hover:bg-orange-600 text-stone-200 hover:text-white text-[10.5px] font-bold transition">INGENUITY 3D</button>
+              <button onclick="window.ARES_APP.toggleMap3dSandbox()" class="ml-1 px-2.5 py-1 rounded bg-red-600/30 hover:bg-red-600 text-red-200 hover:text-white border border-red-500/60 text-[10.5px] font-bold transition">&#10005; CLOSE</button>
+            </div>
+          </div>
+
+          <!-- Sub-toolbar: Interactive 3D Subsystem & Camera Angle Selector -->
+          <div class="h-9 bg-[#141210] border-b border-[#292524] px-3 flex items-center justify-between gap-2 font-mono-tech text-[10.5px] overflow-hidden flex-shrink-0">
+            <div class="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+              <span class="text-orange-400 font-bold flex-shrink-0">INSPECT SUBSYSTEM:</span>
+              <div id="sandboxHotspotPills" class="flex items-center gap-1.5 overflow-hidden"></div>
+            </div>
+            <span class="text-stone-400 hidden lg:inline flex-shrink-0">Drag to rotate 360° • Scroll to zoom</span>
+          </div>
+
+          <div class="flex-1 relative bg-gradient-to-b from-[#1a1512] to-[#080706] min-h-0">
+            <model-viewer
+              id="sandbox3dViewer"
+              camera-controls
+              auto-rotate
+              rotation-per-second="10deg"
+              shadow-intensity="1"
+              exposure="1.15"
+              style="width: 100%; height: 100%; background-color: transparent;"
+            ></model-viewer>
+          </div>
+
+          <!-- Docked Bottom Engineering & Geological Specification Bar (Never clipped or overlapping 3D model!) -->
+          <div id="sandboxHotspotCard" class="bg-[#141210] border-t border-orange-500/50 px-4 py-2.5 flex items-center justify-between gap-4 flex-shrink-0">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span id="hsCardCode" class="px-2 py-0.5 rounded bg-orange-600 text-white font-mono-tech text-[10px] font-extrabold">HS-LANDING</span>
+                <span id="hsCardTitle" class="text-xs font-extrabold text-stone-100 truncate">Octavia E. Butler Landing Site (360° Mastcam-Z Anchor)</span>
+                <span class="text-stone-500">•</span>
+                <span id="hsCardSub" class="font-mono-tech text-[10.5px] text-amber-300 font-bold">MOLA ELEV -2,570m • SOL 0</span>
+              </div>
+              <p id="hsCardDesc" class="text-xs text-stone-300 truncate">
+                Touchdown coordinates 18.4447°N, 77.4508°E. Anchors the 29,517×8,199 Mastcam-Z 360° panorama and 50m vertical nadir projection.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLLAPSIBLE 4-TAB FLIGHT TELEMETRY DECK: ELEVATION, RIMFAX, DUAL-CREW PLSS BURN-DOWN & SOLAR/DUST τ -->
+      <div id="elevProfileDrawer" class="hidden bg-[#141210] border-t border-[#292524] px-4 py-2.5 flex-shrink-0">
+        <div class="flex items-center justify-between gap-2 mb-1.5 font-mono-tech text-[11px] flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button
+              id="btnDrawerElev"
+              onclick="window.ARES_APP.setDrawerMode('elev')"
+              class="px-2.5 py-0.5 rounded bg-orange-600 text-white font-bold text-[10px] transition"
+            >
+              SURFACE ELEV
+            </button>
+            <button
+              id="btnDrawerRimfax"
+              onclick="window.ARES_APP.setDrawerMode('rimfax')"
+              class="px-2.5 py-0.5 rounded bg-[#1c1917] text-stone-300 border border-[#3f3a36] hover:text-white font-bold text-[10px] transition"
+            >
+              RIMFAX (0-15m)
+            </button>
+            <button
+              id="btnDrawerPlss"
+              onclick="window.ARES_APP.setDrawerMode('plss')"
+              class="px-2.5 py-0.5 rounded bg-[#1c1917] text-emerald-300 border border-emerald-500/40 hover:text-white font-bold text-[10px] transition"
+            >
+              PLSS &amp; BUDDY
+            </button>
+            <button
+              id="btnDrawerAtmos"
+              onclick="window.ARES_APP.setDrawerMode('atmos')"
+              class="px-2.5 py-0.5 rounded bg-[#1c1917] text-amber-300 border border-amber-500/40 hover:text-white font-bold text-[10px] transition"
+            >
+              SOLAR &amp; DUST (&tau;)
+            </button>
+
+            <span id="drawerScopeButtons" class="inline-flex items-center gap-1.5">
+              <span class="text-stone-600">|</span>
+              <button
+                id="btnScrubRim"
+                onclick="window.ARES_APP.setScrubScope('rim')"
+                class="px-2 py-0.5 rounded bg-amber-500/25 border border-amber-500/60 text-amber-300 font-bold text-[10px] transition"
+              >
+                RIM SITES 88-93
+              </button>
+              <button
+                id="btnScrubFull"
+                onclick="window.ARES_APP.setScrubScope('full')"
+                class="px-2 py-0.5 rounded bg-[#1c1917] text-stone-300 border border-[#3f3a36] hover:text-white font-bold text-[10px] transition"
+              >
+                FULL 45.25km
+              </button>
+            </span>
+          </div>
+          <span id="gpsScrubReadout" class="text-amber-400 font-bold truncate">RMC 93_0 • SOL 2022 • 45.25 km • ELEV -1936.4m</span>
+        </div>
+
+        <canvas id="elevProfileCanvas" class="w-full h-24 rounded bg-[#0c0a09] border border-[#292524] mb-1.5"></canvas>
+
+        <!-- Sub-Row A: GPS Traverse Scrubber (for Surface Elev & RIMFAX) -->
+        <div id="drawerScrubRow" class="flex items-center gap-3 font-mono-tech text-[10px] text-stone-400">
+          <span id="lblScrubStart">SOL 1995 (44.82 km)</span>
+          <input
+            id="gpsWaypointScrubber"
+            type="range"
+            min="0"
+            max="27"
+            value="27"
+            oninput="window.ARES_APP.scrubGpsHistory(this.value)"
+            class="flex-1"
+          />
+          <span id="lblScrubEnd" class="text-orange-400 font-bold">SITE 093 (45.25 km)</span>
+        </div>
+
+        <!-- Sub-Row B: Dual-Crew EV-1 / EV-2 Buddy-Rule & PLSS Burn-Down Stress Controls -->
+        <div id="drawerPlssControls" class="hidden flex items-center justify-between gap-3 font-mono-tech text-[10px]">
+          <div class="flex items-center gap-3 text-stone-300 truncate">
+            <span class="text-emerald-400 font-bold">&#9632; O₂%</span>
+            <span class="text-sky-400 font-bold">&#9632; CO₂%</span>
+            <span class="text-amber-400 font-bold">&#9632; BATT%</span>
+            <span class="text-red-400 font-bold">--- 15% NASA RESERVE REDLINE</span>
+            <span id="lblBuddySafetyBadge" class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 font-extrabold">
+              EV-1 + EV-2 TETHER (26m) • BUDDY-TOW SAFE
+            </span>
+          </div>
+          <button
+            id="btnBuddyFault"
+            onclick="window.ARES_APP.toggleBuddyFaultSim()"
+            class="px-2.5 py-1 rounded bg-red-950/70 hover:bg-red-700 border border-red-500/70 text-red-200 font-extrabold transition whitespace-nowrap"
+          >
+            &#9888; BUDDY-TOW FAULT CHECK
+          </button>
+        </div>
+
+        <!-- Sub-Row C: Martian Diurnal Local True Solar Time (LTST) & Dust Optical Depth (τ) Controls -->
+        <div id="drawerAtmosControls" class="hidden flex items-center justify-between gap-3 font-mono-tech text-[10px]">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="text-amber-300 font-bold whitespace-nowrap">LTST:</span>
+            <input
+              id="rngLtst"
+              type="range"
+              min="6.0"
+              max="19.5"
+              step="0.25"
+              value="13.5"
+              oninput="window.ARES_APP.setLtstHour(this.value)"
+              class="w-32 xl:w-44"
+            />
+            <span id="lblLtstVal" class="text-stone-100 font-bold whitespace-nowrap">13:30</span>
+            <span class="text-stone-600">|</span>
+            <span class="text-orange-300 font-bold whitespace-nowrap">DUST &tau;:</span>
+            <input
+              id="rngDustTau"
+              type="range"
+              min="0.40"
+              max="3.40"
+              step="0.05"
+              value="0.42"
+              oninput="window.ARES_APP.setDustTau(this.value)"
+              class="w-28 xl:w-40"
+            />
+            <span id="lblDustTauVal" class="text-stone-100 font-bold whitespace-nowrap">0.42 (CLEAR)</span>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              id="btnDustWhiteout"
+              onclick="window.ARES_APP.toggleDustWhiteout()"
+              class="px-2.5 py-1 rounded bg-orange-950/80 hover:bg-orange-600 border border-orange-500/70 text-orange-200 hover:text-white font-extrabold transition whitespace-nowrap"
+            >
+              WHITEOUT (&tau;=3.2)
+            </button>
+            <button
+              onclick="window.ARES_APP.resetAtmosNominal()"
+              class="px-2 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] text-stone-300 font-bold transition whitespace-nowrap"
+            >
+              RESET NOON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOCKED BOTTOM SCIENTIFIC OVERLAYS BAR -->
+      <div class="h-10 bg-[#141210] border-t border-[#292524] px-3 flex items-center justify-between gap-2 flex-shrink-0 overflow-hidden">
+        <div class="flex items-center gap-1.5 whitespace-nowrap">
+          <span class="font-mono-tech text-[10px] font-bold text-stone-400 pr-0.5 hidden xl:inline">OVERLAYS:</span>
+          <button id="pill_topoSlope" onclick="window.ARES_APP.toggleLayer('topoSlope')" class="layer-pill">
+            Slope + Contours
+          </button>
+          <button id="pill_crismSpectral" onclick="window.ARES_APP.toggleLayer('crismSpectral')" class="layer-pill">
+            CRISM Minerals
+          </button>
+          <button id="pill_thermalInertia" onclick="window.ARES_APP.toggleLayer('thermalInertia')" class="layer-pill">
+            THEMIS Footing
+          </button>
+          <button id="pill_radiationWeather" onclick="window.ARES_APP.toggleLayer('radiationWeather')" class="layer-pill">
+            Rad + UHF Shadow
+          </button>
+          <button id="pill_m20Traverse" onclick="window.ARES_APP.toggleLayer('m20Traverse')" class="layer-pill">
+            M2020 45km Track
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1.5 whitespace-nowrap">
+          <span id="mapMedaBadge" class="hidden 2xl:inline-flex items-center px-2 py-0.5 rounded bg-[#1c1917] border border-[#292524] font-mono-tech text-[10px] text-stone-300">
+            LTST 13:30 • -20°C • &tau; 0.42
+          </span>
+          <button
+            id="btnAtmosQuick"
+            onclick="window.ARES_APP.openDrawerTab('atmos')"
+            class="layer-pill text-orange-300 border-orange-500/40"
+            title="Adjust Martian Solar Time (LTST) & Dust Storm Optical Depth (τ)"
+          >
+            &#9728; LTST / &tau;
+          </button>
+          <button
+            id="btnElevDrawer"
+            onclick="window.ARES_APP.toggleElevDrawer()"
+            class="layer-pill text-amber-300 border-amber-500/40"
+          >
+            TELEMETRY DECK
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Inspector Dock (Warm Carbon & Martian Terracotta Theme) -->
+    <aside class="w-[370px] bg-[#141210] border-l border-[#292524] p-3 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0">
+      <!-- 1. Compact Waypoint Stepper -->
+      <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-2.5">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="font-mono-tech text-[10px] font-bold uppercase text-orange-400 tracking-wider">
+            EVA GPS WAYPOINTS
+          </span>
+          <div class="flex gap-1">
+            <button
+              onclick="window.ARES_APP.prevWaypoint()"
+              class="px-2 py-0.5 rounded bg-[#292524] hover:bg-[#3f3a36] border border-[#44403c] font-mono-tech text-[10px] text-stone-200"
+            >
+              &larr; Prev
+            </button>
+            <button
+              onclick="window.ARES_APP.nextWaypoint()"
+              class="px-2 py-0.5 rounded bg-[#292524] hover:bg-[#3f3a36] border border-[#44403c] font-mono-tech text-[10px] text-stone-200"
+            >
+              Next &rarr;
+            </button>
+          </div>
+        </div>
+        <div id="waypointStepper" class="flex gap-1"></div>
+      </div>
+
+      <!-- 2. Active Station Ground-Truth Surface Photo + Raw Sequence Player -->
+      <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-2.5 flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <span id="dockStationCode" class="font-mono-tech text-xs font-extrabold px-2 py-0.5 rounded bg-orange-600 text-white">
+            WP-02
+          </span>
+          <h2 id="dockStationName" class="text-xs font-bold text-stone-100 truncate">
+            Bright Angel Coring &amp; SHERLOC Vein Station
+          </h2>
+        </div>
+
+        <div
+          onclick="window.ARES_APP.setMode('visor')"
+          class="relative rounded-lg overflow-hidden border border-[#3f3a36] bg-black aspect-[16/10] cursor-pointer group"
+        >
+          <img
+            id="dockPhoto"
+            src="assets/optimized/pia26344-perseverance-selfie-at-cheyava_1280.webp"
+            alt="NASA Ground Truth"
+            class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+          />
+          <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2">
+            <div class="flex items-center justify-between font-mono-tech text-[10px]">
+              <span id="dockMetaInstrument" class="text-orange-300 font-bold">WATSON SELFIE (PIA26344)</span>
+              <span id="dockMetaSol" class="text-amber-300 font-bold">SOL 2023</span>
+            </div>
+            <div class="flex items-center justify-between font-mono-tech text-[10px] text-stone-300 mt-0.5">
+              <span id="dockMetaSite">RMC 91_1496</span>
+              <span id="dockMetaCoords">18.4356°N, 77.2328°E</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Folder Sequence Time-Lapse Player -->
+        <div class="flex items-center gap-1.5 bg-[#141210] border border-[#292524] rounded-lg p-1.5 font-mono-tech text-[11px]">
+          <select
+            id="seqSelect"
+            onchange="window.ARES_APP.selectRawSequence(this.value)"
+            class="flex-1 bg-[#1c1917] text-stone-200 px-2 py-1 rounded border border-[#3f3a36] text-[10px] focus:outline-none"
+          >
+            <option value="FHAZ_ARM">Raw Seq: FHAZ Arm Deploy (12 frames)</option>
+            <option value="SRLC_ZSTACK">Raw Seq: SHERLOC Z-Stack (24 frames)</option>
+            <option value="ZCAM_MULTISPEC">Raw Seq: Mastcam-Z Filters (24 frames)</option>
+            <option value="NCAM_OUTCROP">Raw Seq: Navcam Outcrop (23 frames)</option>
+            <option value="SCAM_LASER">Raw Seq: SuperCam RMI (16 frames)</option>
+          </select>
+          <button
+            id="btnPlaySeq"
+            onclick="window.ARES_APP.toggleRawSequencePlay()"
+            class="px-2.5 py-1 rounded bg-orange-600/20 hover:bg-orange-600/35 border border-orange-500/60 text-orange-300 font-bold text-[10px] whitespace-nowrap transition"
+          >
+            &#9654; PLAY SEQ
+          </button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5">
+          <button
+            onclick="window.ARES_APP.setMode('visor')"
+            class="glove-btn bg-orange-600 hover:bg-orange-500 text-white font-mono-tech font-extrabold text-[11px]"
+          >
+            VISOR HUD [3]
+          </button>
+          <button
+            onclick="window.ARES_APP.openMicroLab()"
+            class="glove-btn bg-sky-600/20 hover:bg-sky-600/35 border border-sky-400/60 text-sky-300 font-mono-tech font-bold text-[11px]"
+            title="Launch SHERLOC 248.6nm Deep-UV Raman & PIXL Micro-XRF Astrobiology Lab"
+          >
+            SHERLOC LAB
+          </button>
+          <button
+            id="btnLogSample"
+            onclick="window.ARES_APP.logCurrentStationSample()"
+            class="glove-btn bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/60 text-emerald-300 font-mono-tech font-bold text-[11px]"
+          >
+            + LOG CORE
+          </button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 font-mono-tech text-[11px]">
+          <div class="bg-[#141210] border border-[#292524] rounded-lg p-1.5">
+            <span class="text-[9px] text-stone-400 block">MINERALOGY</span>
+            <span id="dockMineral" class="text-emerald-400 font-bold truncate block">Hydrated Silica</span>
+          </div>
+          <div class="bg-[#141210] border border-[#292524] rounded-lg p-1.5">
+            <span class="text-[9px] text-stone-400 block">SLOPE</span>
+            <span id="dockSlope" class="text-orange-300 font-bold">7.2° (SAFE)</span>
+          </div>
+          <div class="bg-[#141210] border border-[#292524] rounded-lg p-1.5">
+            <span class="text-[9px] text-stone-400 block">FOOTING</span>
+            <span id="dockTi" class="text-amber-300 font-bold">365 TIU</span>
+          </div>
+        </div>
+
+        <p id="dockNotes" class="text-[11px] text-stone-300 leading-relaxed bg-[#141210] border border-[#292524] rounded-lg p-2"></p>
+      </div>
+
+      <!-- 3. Official NASA 3D GLB Models (Rover, Ingenuity, xEMU Spacesuit, Jezero Crater, Martian Terrain) -->
+      <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-2.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="font-mono-tech text-[10px] font-bold uppercase text-orange-400">
+            3D NASA MODELS (5 GLB ASSETS)
+          </span>
+          <button
+            onclick="window.ARES_APP.toggleMap3dSandbox()"
+            class="font-mono-tech text-[10px] text-amber-300 hover:text-white underline"
+          >
+            &#9974; EXPAND 3D
+          </button>
+        </div>
+        <div class="grid grid-cols-5 gap-1 font-mono-tech text-[9.5px]">
+          <button
+            id="btn3d_perseverance"
+            onclick="window.ARES_APP.set3dAsset('perseverance')"
+            class="py-1 rounded bg-orange-600 text-white font-bold transition text-center"
+          >
+            ROVER
+          </button>
+          <button
+            id="btn3d_ingenuity"
+            onclick="window.ARES_APP.set3dAsset('ingenuity')"
+            class="py-1 rounded bg-[#141210] text-stone-300 border border-[#3f3a36] hover:text-white transition text-center"
+          >
+            HELI
+          </button>
+          <button
+            id="btn3d_xemu_suit"
+            onclick="window.ARES_APP.set3dAsset('xemu_suit')"
+            class="py-1 rounded bg-[#141210] text-stone-300 border border-[#3f3a36] hover:text-white transition text-center"
+          >
+            SUIT
+          </button>
+          <button
+            id="btn3d_jezero_crater"
+            onclick="window.ARES_APP.set3dAsset('jezero_crater')"
+            class="py-1 rounded bg-[#141210] text-stone-300 border border-[#3f3a36] hover:text-white transition text-center"
+          >
+            CRATER
+          </button>
+          <button
+            id="btn3d_martian_terrain"
+            onclick="window.ARES_APP.set3dAsset('martian_terrain')"
+            class="py-1 rounded bg-[#141210] text-stone-300 border border-[#3f3a36] hover:text-white transition text-center"
+          >
+            TERRAIN
+          </button>
+        </div>
+
+        <div class="relative h-36 rounded-lg overflow-hidden bg-gradient-to-b from-[#1f1916] to-[#0c0a09] border border-[#292524]">
+          <model-viewer
+            id="nasa3dViewer"
+            camera-controls
+            auto-rotate
+            rotation-per-second="18deg"
+            shadow-intensity="1"
+            exposure="1.1"
+            style="width: 100%; height: 100%; background-color: transparent;"
+          ></model-viewer>
+          <div id="attitudeBadge" class="absolute bottom-1.5 left-2 right-2 flex items-center justify-between font-mono-tech text-[10px] bg-black/80 px-2 py-1 rounded border border-[#292524] text-amber-300 pointer-events-none">
+            <span>ROLL: +5.58°</span>
+            <span>PITCH: +4.69°</span>
+            <span class="text-orange-400">TILT: 7.29°</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Suit PLSS Summary & Collapsible Simulation Drawer -->
+      <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-2.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="font-mono-tech text-[10px] font-bold uppercase text-orange-400">
+            SUIT PLSS &amp; WALK-BACK LIMIT
+          </span>
+          <span id="lblAbortRadius" class="font-mono-tech text-[11px] font-extrabold text-emerald-400">
+            1210m
+          </span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 font-mono-tech text-xs text-center">
+          <div class="bg-[#141210] border border-[#292524] rounded-lg py-1 px-2">
+            <span class="text-[9px] text-stone-400 block">O₂ TANK</span>
+            <span id="lblO2" class="text-stone-100 font-bold">86%</span>
+          </div>
+          <div class="bg-[#141210] border border-[#292524] rounded-lg py-1 px-2">
+            <span class="text-[9px] text-stone-400 block">SCRUBBER</span>
+            <span id="lblScrubber" class="text-emerald-400 font-bold">80%</span>
+          </div>
+          <div class="bg-[#141210] border border-[#292524] rounded-lg py-1 px-2">
+            <span class="text-[9px] text-stone-400 block">BATTERY</span>
+            <span id="lblBattery" class="text-amber-400 font-bold">90%</span>
+          </div>
+        </div>
+
+        <!-- Live Astronaut Biometrics & Walk-Back Reserve Margin -->
+        <div class="grid grid-cols-3 gap-1.5 font-mono-tech text-[10px] text-center">
+          <div class="bg-[#141210] border border-[#292524] rounded-lg py-1 px-1.5">
+            <span class="text-[8.5px] text-stone-400 block">HEART RATE</span>
+            <span id="lblBioHr" class="text-orange-300 font-bold">96 BPM</span>
+          </div>
+          <div class="bg-[#141210] border border-[#292524] rounded-lg py-1 px-1.5">
+            <span class="text-[8.5px] text-stone-400 block">O₂ METABOLIC</span>
+            <span id="lblBioO2Rate" class="text-amber-300 font-bold">0.94 L/m</span>
+          </div>
+          <div class="bg-[#141210] border border-[#292524] rounded-lg py-1 px-1.5">
+            <span class="text-[8.5px] text-stone-400 block">HAB MARGIN</span>
+            <span id="lblBioMargin" class="text-emerald-400 font-bold">+64% SAFE</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between font-mono-tech text-[10px] text-stone-400">
+          <span>ROUTE BUDGET:</span>
+          <span id="lblRouteStats" class="text-stone-200 font-semibold">1,420m • 184 min</span>
+        </div>
+
+        <details class="group pt-1 border-t border-[#292524]">
+          <summary class="font-mono-tech text-[10px] text-stone-400 hover:text-orange-400 cursor-pointer flex items-center justify-between select-none">
+            <span>&#9881; SIMULATE CONSUMABLES / 0.38g SUIT LOAD</span>
+            <span class="group-open:rotate-180 transition">&darr;</span>
+          </summary>
+          <div class="space-y-2 text-[11px] font-mono-tech pt-2">
+            <label class="flex items-center justify-between bg-[#141210] border border-[#292524] rounded-lg px-2.5 py-1.5 cursor-pointer">
+              <span class="text-[10px] text-amber-300 font-bold">ROVER MULE TETHER (UNLOADED SUIT)</span>
+              <input
+                id="chkMuleAssist"
+                type="checkbox"
+                checked
+                onchange="window.ARES_APP.toggleMuleAssist(this.checked)"
+                class="w-4 h-4 accent-orange-500 cursor-pointer"
+              />
+            </label>
+            <div>
+              <span class="text-stone-400 block mb-1">Primary O₂ Reserve</span>
+              <input id="rngO2" type="range" min="20" max="100" value="86" oninput="window.ARES_APP.updateConsumable('o2Pct', this.value)" class="w-full" />
+            </div>
+            <div>
+              <span class="text-stone-400 block mb-1">CO₂ LiOH/RCA Scrubber</span>
+              <input id="rngScrubber" type="range" min="20" max="100" value="80" oninput="window.ARES_APP.updateConsumable('scrubberPct', this.value)" class="w-full" />
+            </div>
+            <div>
+              <span class="text-stone-400 block mb-1">PLSS Battery Reserve</span>
+              <input id="rngBattery" type="range" min="20" max="100" value="90" oninput="window.ARES_APP.updateConsumable('batteryPct', this.value)" class="w-full" />
+            </div>
+            <button
+              id="btnSepStorm"
+              onclick="window.ARES_APP.toggleSepStorm()"
+              class="w-full py-1.5 rounded bg-red-600/20 hover:bg-red-600/35 border border-red-500/50 text-red-300 font-mono-tech text-[11px] font-bold mt-1"
+            >
+              TRIGGER SOLAR SEP STORM SIM
+            </button>
+          </div>
+        </details>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ========================================================================
+       MODE 3: 360° VISOR PANORAMA (ZERO OVERLAPPING PANELS • DOCKED BOTTOM DECK)
+       ======================================================================== -->
+  <main id="view_visor" class="hidden flex-1 flex flex-col bg-[#0c0a09] overflow-hidden">
+
+    <!-- Upper Interactive 360° Visor Viewport -->
+    <div class="flex-1 relative overflow-hidden bg-black">
+      <canvas id="visorHudCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+      <div class="absolute inset-0 visor-peripheral-frame"></div>
+
+      <!-- Floating Top-Center Controls when in DIY 3D VR Goggles Mode -->
+      <div
+        id="vrOverlayControls"
+        class="hidden absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2"
+      >
+        <button
+          onclick="window.ARES_APP.recenterVisor()"
+          class="px-3.5 py-1.5 rounded-full bg-[#141210]/95 hover:bg-[#292524] text-amber-300 font-mono-tech text-xs font-extrabold shadow-2xl border border-amber-400/70 transition"
+          title="Zero / Re-Center Gyroscope Forward Heading"
+        >
+          &#10227; RE-CENTER
+        </button>
+        <button
+          id="btnVrSynthOverlay"
+          onclick="window.ARES_APP.toggleVisorSyntheticVision()"
+          class="px-3.5 py-1.5 rounded-full bg-[#141210]/95 hover:bg-sky-900 text-sky-300 font-mono-tech text-xs font-extrabold shadow-2xl border border-sky-400/70 transition"
+          title="Toggle DEM Synthetic Vision Wireframe inside 3D Goggles"
+        >
+          SYNTH VISION
+        </button>
+        <button
+          id="btnExitVrOverlay"
+          onclick="window.ARES_APP.toggleVrGogglesMode()"
+          class="px-4 py-1.5 rounded-full bg-orange-600/95 hover:bg-orange-500 text-white font-mono-tech text-xs font-extrabold shadow-2xl border border-amber-300 transition"
+        >
+          &#10005; EXIT 3D GOGGLES [V]
+        </button>
+      </div>
+
+      <!-- Compact Top-Left Station & Camera Source Switcher (Automatically hides in 3D Goggles Mode) -->
+      <div id="visorTopLeftCard" class="hud-peripheral absolute top-3 left-4 hud-glass rounded-xl p-3 max-w-md flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-mono-tech text-[11px] font-bold uppercase tracking-wider text-orange-400">
+            xEVA VISOR OPTICS // POV
+          </span>
+          <span id="visorZoomBadge" class="font-mono-tech text-[11px] px-2 py-0.5 rounded bg-[#1c1917] text-amber-400 border border-[#3f3a36] font-bold">
+            1.0x ZOOM
+          </span>
+        </div>
+        <div id="visorTitle" class="text-sm font-extrabold text-stone-100 truncate">
+          WP-02: Polygonal Boxwork Ridge Primary Outcrop
+        </div>
+        <div id="visorMetaBadge" class="text-[11px] font-mono-tech text-stone-300 bg-[#141210] px-2.5 py-1 rounded border border-[#292524] truncate">
+          Instrument: MASTCAM MOSAIC | SOL 4462 | PIA26696
+        </div>
+        <div id="visorMedaLine" class="text-[10.5px] font-mono-tech text-amber-300/95 bg-[#141210]/90 px-2.5 py-1 rounded border border-[#292524] truncate">
+          MEDA: -20°C (Gnd -8°C) • 7.4 mbar • Wind 5.8 m/s • τ=0.42 • 0.021 mSv/hr
+        </div>
+
+        <div class="flex items-center gap-1.5 pt-0.5 flex-wrap">
+          <button
+            id="visorSrc_pano"
+            onclick="window.ARES_APP.setVisorSource('pano')"
+            class="px-2.5 py-1 rounded text-[11px] font-mono-tech font-bold bg-orange-600 text-white transition"
+          >
+            360° PANO
+          </button>
+          <button
+            id="visorSrc_butler360"
+            onclick="window.ARES_APP.setVisorSource('butler360')"
+            class="px-2.5 py-1 rounded text-[11px] font-mono-tech font-semibold text-amber-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+            title="29,517 x 8,199 Mastcam-Z 360° Octavia E. Butler Landing Mosaic"
+          >
+            360° BUTLER (29K)
+          </button>
+          <button
+            id="visorSrc_vert50m"
+            onclick="window.ARES_APP.setVisorSource('vert50m')"
+            class="px-2.5 py-1 rounded text-[11px] font-mono-tech font-semibold text-stone-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+            title="Mastcam-Z 360° Vertical Projection out to 50m"
+          >
+            50m NADIR
+          </button>
+          <button
+            id="visorSrc_closeup"
+            onclick="window.ARES_APP.setVisorSource('closeup')"
+            class="px-2.5 py-1 rounded text-[11px] font-mono-tech font-semibold text-stone-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+          >
+            CLOSE-UP
+          </button>
+          <button
+            id="visorSrc_alt"
+            onclick="window.ARES_APP.setVisorSource('alt')"
+            class="px-2.5 py-1 rounded text-[11px] font-mono-tech font-semibold text-stone-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+          >
+            MICRO
+          </button>
+        </div>
+
+        <!-- Spectral Visor Optics Filter Selector -->
+        <div class="flex items-center gap-1.5 pt-1.5 border-t border-[#292524] flex-wrap">
+          <span class="font-mono-tech text-[10px] text-stone-400 font-bold mr-0.5">FILTER:</span>
+          <button
+            id="visorFlt_natural"
+            onclick="window.ARES_APP.setVisorFilter('natural')"
+            class="px-2 py-0.5 rounded text-[10.5px] font-mono-tech font-bold bg-orange-600 text-white transition"
+          >
+            NATURAL
+          </button>
+          <button
+            id="visorFlt_enhanced"
+            onclick="window.ARES_APP.setVisorFilter('enhanced')"
+            class="px-2 py-0.5 rounded text-[10.5px] font-mono-tech font-semibold text-stone-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+            title="Enhanced Geologic False-Color Stretch (Ferric / Sulfate Contrast)"
+          >
+            GEOL STRETCH
+          </button>
+          <button
+            id="visorFlt_thermal"
+            onclick="window.ARES_APP.setVisorFilter('thermal')"
+            class="px-2 py-0.5 rounded text-[10.5px] font-mono-tech font-semibold text-stone-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+            title="THEMIS Thermal Inertia / Night-Vision IR Overlay"
+          >
+            THERMAL IR
+          </button>
+          <button
+            id="visorFlt_anaglyph"
+            onclick="window.ARES_APP.setVisorFilter('anaglyph')"
+            class="px-2 py-0.5 rounded text-[10.5px] font-mono-tech font-semibold text-stone-300 hover:text-white bg-[#1c1917] border border-[#3f3a36] transition"
+            title="Stereo Red/Cyan 3D Anaglyph Parallax Mode"
+          >
+            3D ANAGLYPH
+          </button>
+        </div>
+
+        <!-- Tactical Synthetic Vision (DEM Wireframe), Dust Whiteout & SHERLOC Micro-Lab -->
+        <div class="flex items-center gap-1.5 pt-1.5 border-t border-[#292524] flex-wrap">
+          <button
+            id="btnVisorSynth"
+            onclick="window.ARES_APP.toggleVisorSyntheticVision()"
+            class="px-2.5 py-1 rounded text-[10px] font-mono-tech font-extrabold bg-[#1c1917] hover:bg-sky-900/40 border border-sky-400/60 text-sky-300 transition"
+            title="Project 3D HiRISE DEM Ridge Horizon Wireframe & Ground Route Corridor through Dust Storms [Key S]"
+          >
+            SYNTHETIC VISION [S]
+          </button>
+          <button
+            id="btnVisorDust"
+            onclick="window.ARES_APP.toggleDustWhiteout()"
+            class="px-2.5 py-1 rounded text-[10px] font-mono-tech font-bold bg-[#1c1917] hover:bg-orange-950 border border-amber-500/60 text-amber-300 transition"
+            title="Simulate Martian Dust Storm Whiteout (Optical Depth τ = 3.2)"
+          >
+            DUST WHITEOUT (&tau;=3.2)
+          </button>
+          <button
+            onclick="window.ARES_APP.openMicroLab()"
+            class="px-2.5 py-1 rounded text-[10px] font-mono-tech font-bold bg-[#1c1917] hover:bg-[#292524] border border-emerald-500/60 text-emerald-300 transition"
+          >
+            SHERLOC LAB
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCKED FULL-WIDTH BOTTOM VISOR TELEMETRY, LASER & 3D VR GOGGLES DECK (100% Visible at 100% Zoom!) -->
+    <div class="h-14 bg-[#141210] border-t border-[#292524] px-3 flex items-center justify-between gap-2 flex-shrink-0 overflow-hidden whitespace-nowrap">
+      <!-- Left: High-Contrast Suit PLSS Telemetry -->
+      <div class="flex items-center gap-1.5 font-mono-tech text-xs flex-shrink-0">
+        <span class="text-[11px] font-extrabold text-orange-400 uppercase mr-0.5">PLSS:</span>
+        <span class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#292524]">
+          <span class="text-stone-400 text-[11px]">O₂</span>
+          <span id="visorO2" class="font-extrabold text-stone-100 ml-1">86%</span>
+        </span>
+        <span class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#292524]">
+          <span class="text-stone-400 text-[11px]">CO₂</span>
+          <span id="visorScrubber" class="font-extrabold text-emerald-400 ml-1">80%</span>
+        </span>
+        <span class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#292524]">
+          <span class="text-stone-400 text-[11px]">BATT</span>
+          <span id="visorBattery" class="font-extrabold text-amber-400 ml-1">90%</span>
+        </span>
+        <span class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#292524] hidden xl:inline-block">
+          <span class="text-stone-400 text-[11px]">LIMIT</span>
+          <span id="visorAbort" class="font-extrabold text-stone-100 ml-1">1210m</span>
+        </span>
+      </div>
+
+      <!-- Center: Visor Tactical Action Controls -->
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <button
+          onclick="window.ARES_APP.prevWaypoint()"
+          class="glove-btn bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] font-mono-tech text-stone-100"
+        >
+          &larr; PREV
+        </button>
+        <button
+          id="btnLaserAim"
+          onclick="window.ARES_APP.toggleLaserAimMode()"
+          class="glove-btn bg-red-600/20 hover:bg-red-600/35 border border-red-500/70 text-red-200 font-mono-tech"
+          title="Click any rock in the 360° Visor to fire SuperCam LIBS Laser and inspect elemental spectrum"
+        >
+          AIM LASER [L]
+        </button>
+        <button
+          onclick="window.ARES_APP.fireLaser()"
+          class="glove-btn bg-[#1c1917] hover:bg-[#292524] border border-red-500/50 text-red-300 font-mono-tech"
+        >
+          FIRE LASER
+        </button>
+        <button
+          id="btnLogLaserSample"
+          onclick="window.ARES_APP.logLaserAssaySample()"
+          class="glove-btn bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/60 text-emerald-300 font-mono-tech"
+        >
+          + LOG ASSAY
+        </button>
+        <button
+          onclick="window.ARES_APP.resetZoom()"
+          class="glove-btn bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] font-mono-tech text-stone-200"
+        >
+          1:1 ZOOM
+        </button>
+        <button
+          id="btnDeclutter"
+          onclick="window.ARES_APP.toggleDeclutter()"
+          class="glove-btn bg-[#1c1917] hover:bg-[#292524] border border-orange-500/60 font-mono-tech text-orange-300"
+        >
+          DECLUTTER
+        </button>
+        <button
+          onclick="window.ARES_APP.nextWaypoint()"
+          class="glove-btn bg-[#1c1917] hover:bg-[#292524] border border-[#3f3a36] font-mono-tech text-stone-100"
+        >
+          NEXT &rarr;
+        </button>
+      </div>
+
+      <!-- Right: Physical DIY 3D VR Goggles (Stereoscopic SBS) + iPhone Gyroscope Head-Tracking -->
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <button
+          id="btnVrGoggles"
+          onclick="window.ARES_APP.toggleVrGogglesMode()"
+          class="glove-btn bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white border border-amber-300 font-mono-tech shadow-[0_0_12px_rgba(249,115,22,0.4)]"
+          title="Stereoscopic Side-by-Side (SBS) 3D Binocular Visor Mode for DIY iPhone + Magnifying Glass 3D Goggles"
+        >
+          3D GOGGLES [V]
+        </button>
+        <button
+          id="btnGyroTrack"
+          onclick="window.ARES_APP.toggleGyroTracking()"
+          class="glove-btn bg-[#1c1917] hover:bg-[#292524] border border-amber-500/60 text-amber-300 font-mono-tech"
+          title="Enable iPhone / Smartphone Gyroscope & Compass Head-Tracking for physical 3D Visor Goggles"
+        >
+          GYRO TRACK
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================
+       MODE 4: SCIENCE & SAMPLE LOG + 219 REAL LOCAL NASA FILES MANIFEST
+       ======================================================================== -->
+  <main id="view_science" class="hidden flex-1 grid grid-cols-12 gap-4 p-5 overflow-hidden bg-[#0c0a09] relative">
+    <section class="col-span-4 flex flex-col gap-4 overflow-y-auto pr-1">
+      <div class="bg-[#141210] border border-[#292524] rounded-xl p-4 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-[#292524] pb-2 flex-wrap gap-1.5">
+          <h2 class="font-mono-tech text-xs font-extrabold uppercase text-orange-400">
+            EVA Collected Sample Registry
+          </h2>
+          <div class="flex items-center gap-1.5">
+            <button
+              onclick="window.ARES_APP.openMicroLab()"
+              class="px-2.5 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-sky-400/60 font-mono-tech text-[10px] font-bold text-sky-300 transition"
+            >
+              SHERLOC LAB
+            </button>
+            <button
+              onclick="window.ARES_APP.openMissionDebrief()"
+              class="px-2.5 py-1 rounded bg-[#1c1917] hover:bg-[#292524] border border-amber-500/60 font-mono-tech text-[10px] font-bold text-amber-300 transition"
+            >
+              DEBRIEF (FDF)
+            </button>
+            <button
+              onclick="window.ARES_APP.logCurrentStationSample()"
+              class="px-2.5 py-1 rounded bg-orange-600 hover:bg-orange-500 font-mono-tech text-[10px] font-bold text-white transition"
+            >
+              + LOG SAMPLE
+            </button>
+          </div>
+        </div>
+        <div id="sampleLogContainer" class="space-y-2.5"></div>
+      </div>
+
+      <div class="bg-[#141210] border border-[#292524] rounded-xl p-4 flex flex-col gap-3">
+        <h3 class="font-mono-tech text-xs font-extrabold uppercase text-amber-400 border-b border-[#292524] pb-2">
+          Station Sampling Protocol &amp; Oxide Geochemistry (wt%)
+        </h3>
+        <div id="sciProtocolList" class="space-y-2"></div>
+        <div id="sciOxidesGrid" class="grid grid-cols-3 gap-2 pt-2"></div>
+      </div>
+    </section>
+
+    <section class="col-span-8 bg-[#141210] border border-[#292524] rounded-xl p-4 flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between gap-2 pb-3 border-b border-[#292524] flex-wrap">
+        <div>
+          <h2 class="font-mono-tech text-sm font-extrabold text-stone-100">
+            INDEXED LOCAL NASA SURFACE &amp; ORBITAL DATASET (data/mission_manifest.json)
+          </h2>
+          <p id="manifestCountLabel" class="font-mono-tech text-xs text-orange-400 mt-0.5"></p>
+        </div>
+        <div class="flex items-center gap-1.5 flex-wrap font-mono-tech text-xs">
+          <button id="edrBtn_ALL" onclick="window.ARES_APP.setEdrFilter('ALL')" class="px-2.5 py-1.5 rounded bg-orange-600 text-white font-bold transition">ALL (219)</button>
+          <button id="edrBtn_CURIOSITY" onclick="window.ARES_APP.setEdrFilter('CURIOSITY')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-amber-300 border border-[#3f3a36] transition">GALE / PIA26696 (7)</button>
+          <button id="edrBtn_ZCAM" onclick="window.ARES_APP.setEdrFilter('ZCAM')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-stone-200 border border-[#3f3a36] transition">MASTCAM-Z (72)</button>
+          <button id="edrBtn_NCAM" onclick="window.ARES_APP.setEdrFilter('NCAM')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-stone-200 border border-[#3f3a36] transition">NAVCAM (56)</button>
+          <button id="edrBtn_SRLC" onclick="window.ARES_APP.setEdrFilter('SRLC')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-stone-200 border border-[#3f3a36] transition">SHERLOC (47)</button>
+          <button id="edrBtn_FHAZ" onclick="window.ARES_APP.setEdrFilter('FHAZ')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-stone-200 border border-[#3f3a36] transition">FHAZ (27)</button>
+          <button id="edrBtn_SCAM" onclick="window.ARES_APP.setEdrFilter('SCAM')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-stone-200 border border-[#3f3a36] transition">SUPERCAM (5)</button>
+          <button id="edrBtn_MEDA" onclick="window.ARES_APP.setEdrFilter('MEDA')" class="px-2.5 py-1.5 rounded bg-[#1c1917] hover:bg-[#292524] text-stone-200 border border-[#3f3a36] transition">MEDA (3)</button>
+        </div>
+      </div>
+
+      <div id="manifestImageGrid" class="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 pt-3 pr-1"></div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       GLOBAL MODAL 1: NASA EVA FLIGHT DATA FILE (FDF) MISSION DEBRIEF
+       ======================================================================== -->
+  <div id="missionDebriefModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+    <div class="w-full max-w-4xl max-h-[88vh] bg-[#141210] border border-orange-500/70 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div class="h-12 bg-[#1c1917] border-b border-[#292524] px-5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 font-mono-tech">
+          <span class="px-2 py-0.5 rounded bg-orange-600 text-white text-xs font-extrabold">NASA FDF // EVA DEBRIEF</span>
+          <span id="fdfModalTitle" class="text-xs font-bold text-stone-100">SURFACE EVA TRAVERSE &amp; ASTROBIOLOGY ASSAY REPORT</span>
+        </div>
+        <div class="no-print flex items-center gap-2 font-mono-tech text-xs">
+          <button
+            onclick="window.ARES_APP.exportScienceJson()"
+            class="px-3 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/60 text-emerald-300 font-bold transition"
+          >
+            EXPORT JSON
+          </button>
+          <button
+            onclick="window.print()"
+            class="px-3 py-1 rounded bg-orange-600 hover:bg-orange-500 text-white font-bold transition"
+          >
+            PRINT / PDF
+          </button>
+          <button
+            onclick="window.ARES_APP.closeMissionDebrief()"
+            class="px-2.5 py-1 rounded bg-[#292524] hover:bg-red-600 text-stone-300 hover:text-white font-bold transition"
+          >
+            &#10005; CLOSE
+          </button>
+        </div>
+      </div>
+      <div id="fdfModalBody" class="p-6 overflow-y-auto space-y-4 font-mono-tech text-xs"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       GLOBAL MODAL 2: CAPCOM LIVE WI-FI TELEMETRY SYNC (IPHONE 3D GOGGLES <-> LAPTOP)
+       ======================================================================== -->
+  <div id="capcomSyncModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+    <div class="w-full max-w-2xl bg-[#141210] border border-orange-500/70 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div class="h-12 bg-[#1c1917] border-b border-[#292524] px-5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 font-mono-tech">
+          <span class="px-2 py-0.5 rounded bg-orange-600 text-white text-xs font-extrabold">CAPCOM // WI-FI TELEMETRY</span>
+          <span class="text-xs font-bold text-stone-100">DIY iPHONE 3D VISOR GOGGLES &harr; MISSION CONTROL LIVE SYNC</span>
+        </div>
+        <button
+          onclick="window.ARES_APP.closeCapcomModal()"
+          class="px-2.5 py-1 rounded bg-[#292524] hover:bg-red-600 text-stone-300 hover:text-white font-mono-tech text-xs font-bold transition"
+        >
+          &#10005; CLOSE
+        </button>
+      </div>
+
+      <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-5 font-mono-tech text-xs">
+        <div class="md:col-span-5 flex flex-col items-center justify-center bg-[#1c1917] border border-[#292524] rounded-xl p-4 gap-2.5">
+          <div id="capcomQrContainer" class="rounded-lg overflow-hidden bg-white p-1.5 shadow-lg"></div>
+          <span class="text-[10.5px] text-amber-300 font-bold text-center">
+            SCAN WITH iPHONE CAMERA ON SAME WI-FI
+          </span>
+        </div>
+
+        <div class="md:col-span-7 flex flex-col justify-between gap-3">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[10.5px] text-stone-400 font-bold uppercase">TELEMETRY LINK STATUS</span>
+              <span id="capcomStatusBadge" class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[10px] font-extrabold">
+                STANDBY • READY FOR VISOR
+              </span>
+            </div>
+
+            <div class="bg-[#1c1917] border border-[#292524] rounded-lg p-2.5">
+              <div class="text-[10px] text-stone-400 mb-1">EVA VISOR TRANSMITTER URL:</div>
+              <div class="flex items-center gap-2">
+                <code id="capcomVisorUrl" class="flex-1 text-[11px] text-orange-300 font-bold truncate select-all">
+                  http://192.168.1.7:8080/?visor=1
+                </code>
+                <button
+                  onclick="window.ARES_APP.copyCapcomUrl()"
+                  id="btnCopyCapcomUrl"
+                  class="px-2 py-1 rounded bg-[#292524] hover:bg-orange-600 text-stone-200 hover:text-white text-[10px] font-bold transition"
+                >
+                  COPY
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-[#1c1917] border border-[#292524] rounded-lg p-2.5">
+              <div class="text-[10px] text-stone-400 mb-1.5">THIS DEVICE ROLE:</div>
+              <div class="grid grid-cols-3 gap-1.5">
+                <button
+                  id="btnRole_mc"
+                  onclick="window.ARES_APP.setCapcomRole('mc')"
+                  class="py-1.5 rounded bg-orange-600 text-white font-bold text-[10px] transition"
+                >
+                  MISSION CTRL
+                </button>
+                <button
+                  id="btnRole_visor"
+                  onclick="window.ARES_APP.setCapcomRole('visor')"
+                  class="py-1.5 rounded bg-[#141210] border border-[#3f3a36] text-stone-300 font-bold text-[10px] transition"
+                >
+                  VISOR TX (PHONE)
+                </button>
+                <button
+                  id="btnRole_off"
+                  onclick="window.ARES_APP.setCapcomRole('off')"
+                  class="py-1.5 rounded bg-[#141210] border border-[#3f3a36] text-stone-400 font-bold text-[10px] transition"
+                >
+                  OFFLINE SOLO
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-[#0c0a09] border border-[#292524] rounded-lg p-3 text-[11px] text-stone-300 space-y-1 leading-snug">
+            <div class="text-orange-400 font-bold">BI-DIRECTIONAL CO-OP JUDGE DEMO WORKFLOW:</div>
+            <div>1. Run <span class="text-amber-300 font-bold">START_ARES_CAPCOM.bat</span> on this laptop (same Wi-Fi / Hotspot).</div>
+            <div>2. Scan QR on your iPhone &rarr; tap <span class="text-amber-300 font-bold">3D GOGGLES [V]</span> + <span class="text-amber-300 font-bold">GYRO TRACK</span>.</div>
+            <div>3. Two-Way Co-Op: As the judge turns their head or gaze-zaps rocks in the 3D Goggles, the 2D &amp; 3D Map tracks their live FOV cone — AND when you click <span class="text-sky-300 font-bold">&#9670; MARK</span> on any outcrop on the laptop, a 3D AR Target Diamond &amp; audio directive beam straight into the judge's goggles!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       GLOBAL MODAL 3: SHERLOC 248.6nm DEEP-UV RAMAN & PIXL XRF MICRO-LAB
+       ======================================================================== -->
+  <div id="microLabModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-5">
+    <div class="w-full max-w-5xl max-h-[92vh] bg-[#141210] border border-orange-500/70 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <!-- Top Header -->
+      <div class="h-12 bg-[#1c1917] border-b border-[#292524] px-4 flex items-center justify-between gap-3 flex-shrink-0">
+        <div class="flex items-center gap-2.5 font-mono-tech min-w-0">
+          <span class="px-2 py-0.5 rounded bg-orange-600 text-white text-[11px] font-extrabold flex-shrink-0">
+            SHERLOC UV + PIXL XRF
+          </span>
+          <span id="microModalTitle" class="text-xs font-extrabold text-stone-100 truncate">
+            Cheyava Falls / Bright Angel Ca-Sulfate Vein &amp; Redox Spots
+          </span>
+        </div>
+        <button
+          onclick="window.ARES_APP.closeMicroLab()"
+          class="px-2.5 py-1 rounded bg-[#292524] hover:bg-red-600 text-stone-300 hover:text-white font-mono-tech text-xs font-bold transition flex-shrink-0"
+        >
+          &#10005; CLOSE
+        </button>
+      </div>
+
+      <!-- Target Selector Sub-Header -->
+      <div class="bg-[#181512] border-b border-[#292524] px-4 py-2 flex items-center justify-between gap-2 flex-wrap flex-shrink-0">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button id="btnMicroTgt_cheyava_vein" onclick="window.ARES_APP.setMicroTarget('cheyava_vein')" class="px-2.5 py-1 rounded bg-orange-600 text-white font-mono-tech text-[10px] font-extrabold transition">
+            CHEYAVA VEIN (SRLC)
+          </button>
+          <button id="btnMicroTgt_nodular_carbonate" onclick="window.ARES_APP.setMicroTarget('nodular_carbonate')" class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#3f3a36] text-stone-300 font-mono-tech text-[10px] font-bold transition">
+            MARGIN CARBONATE
+          </button>
+          <button id="btnMicroTgt_supercam_ablation" onclick="window.ARES_APP.setMicroTarget('supercam_ablation')" class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#3f3a36] text-stone-300 font-mono-tech text-[10px] font-bold transition">
+            SUPERCAM RMI PITS
+          </button>
+          <button id="btnMicroTgt_gale_boxwork" onclick="window.ARES_APP.setMicroTarget('gale_boxwork')" class="px-2.5 py-1 rounded bg-[#1c1917] border border-[#3f3a36] text-stone-300 font-mono-tech text-[10px] font-bold transition">
+            GALE BOXWORK (PIA26696)
+          </button>
+        </div>
+        <span id="microInstrumentLine" class="font-mono-tech text-[10.5px] text-amber-300 font-bold truncate">
+          SHERLOC 248.6nm Deep-UV ACI + PIXL 120µm Micro-XRF • 18.4356°N, 77.2328°E
+        </span>
+      </div>
+
+      <!-- Main Microscope & Spectroscopy Grid -->
+      <div class="p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-y-auto flex-1 min-h-0">
+        <!-- Left 7 Columns: Interactive Multi-Spectral Diagnostic Lens -->
+        <div class="lg:col-span-7 flex flex-col gap-2.5 min-h-[340px]">
+          <div class="flex-1 relative rounded-xl overflow-hidden border border-[#3f3a36] bg-[#090807] min-h-[300px]">
+            <canvas id="microLabCanvas" class="w-full h-full cursor-crosshair"></canvas>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnMicroMode_uv_raman" onclick="window.ARES_APP.setMicroLensMode('uv_raman')" class="flex-1 py-1.5 px-2 rounded bg-sky-500/25 border border-sky-400 text-sky-200 font-mono-tech text-[10px] font-extrabold transition">
+              248.6nm UV RAMAN (ORGANICS)
+            </button>
+            <button id="btnMicroMode_pixl_xrf" onclick="window.ARES_APP.setMicroLensMode('pixl_xrf')" class="flex-1 py-1.5 px-2 rounded bg-[#1c1917] border border-[#3f3a36] text-stone-300 font-mono-tech text-[10px] font-bold transition">
+              PIXL 120&mu;m XRF (Fe/P/S/Ca)
+            </button>
+            <button id="btnMicroMode_fusion" onclick="window.ARES_APP.setMicroLensMode('fusion')" class="flex-1 py-1.5 px-2 rounded bg-[#1c1917] border border-[#3f3a36] text-stone-300 font-mono-tech text-[10px] font-bold transition">
+              REDOX BIOSIG FUSION
+            </button>
+          </div>
+        </div>
+
+        <!-- Right 5 Columns: CoLD Scale (1-7), Stokes Raman Spectrum & PIXL Geochemistry -->
+        <div class="lg:col-span-5 flex flex-col justify-between gap-2.5">
+          <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono-tech text-[10px] text-stone-400 uppercase font-bold">DIAGNOSTIC SPOT ASSAY</span>
+              <span id="microColdBadge" class="px-2 py-0.5 rounded bg-emerald-600 text-white font-mono-tech text-[10.5px] font-extrabold">
+                CoLD 4 / 7
+              </span>
+            </div>
+            <div id="microSpotTitle" class="text-xs font-extrabold text-emerald-400">
+              LEOPARD SPOT #1 // VIVIANITE-GREIGITE REDOX HALO
+            </div>
+            <p id="microSpotNote" class="text-[11px] text-stone-300 leading-snug">
+              Drag the circular UV/X-Ray lens across ROI-01..03 on the rock to inspect millimeter-scale redox rims and organic carbon vibrational peaks.
+            </p>
+          </div>
+
+          <!-- NASA Confidence of Life Detection (CoLD) Scale 1-7 -->
+          <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3 space-y-1.5">
+            <div class="flex items-center justify-between font-mono-tech text-[10px]">
+              <span class="text-orange-400 font-extrabold uppercase">NASA CoLD BIOSIGNATURE SCALE (1–7)</span>
+              <span class="text-stone-400">L5–L7: EARTH MSR</span>
+            </div>
+            <div id="microColdScaleBar" class="flex items-center gap-1"></div>
+            <div id="microColdDesc" class="font-mono-tech text-[10px] text-amber-300 leading-tight">
+              CoLD LEVEL 4 // Abiotic Sources Unlikely at &lt;100°C
+            </div>
+          </div>
+
+          <!-- Live 800-1800 cm^-1 Stokes Raman Vibrational Spectrum -->
+          <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-2.5 space-y-1">
+            <div class="font-mono-tech text-[10px] text-stone-300 font-bold flex justify-between">
+              <span>248.6nm DEEP-UV RAMAN SPECTRUM</span>
+              <span class="text-emerald-400">G-BAND 1595 cm⁻¹</span>
+            </div>
+            <canvas id="microRamanCanvas" class="w-full h-24 rounded bg-[#090807] border border-[#292524]"></canvas>
+          </div>
+
+          <!-- PIXL 120µm Elemental Oxide Composition -->
+          <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-2.5 space-y-1.5">
+            <div class="font-mono-tech text-[10px] text-stone-300 font-bold">
+              PIXL XRF MICRO-BEAM OXIDES (wt%)
+            </div>
+            <div id="microPixlBars" class="space-y-1"></div>
+          </div>
+
+          <button
+            id="btnLogMicroSample"
+            onclick="window.ARES_APP.logMicroLabSample()"
+            class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono-tech text-xs font-extrabold shadow-[0_0_14px_rgba(16,185,129,0.35)] transition"
+          >
+            + LOG BIOSIGNATURE MICRO-ASSAY TO FDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="data/mission_manifest.js"></script>
+  <script src="js/m20_gps_data.js"></script>
+  <script src="js/mars_audio_data.js"></script>
+  <script src="js/dem_heightfields.js"></script>
+  <script src="js/globe_textures.js"></script>
+  <script src="js/planet_globe.js"></script>
+  <script src="js/mission_data.js"></script>
+  <script src="js/routing_engine.js"></script>
+  <script src="js/gis_console.js"></script>
+  <script src="js/terrain_3d.js"></script>
+  <script src="js/visor_hud.js"></script>
+  <script src="js/micro_lab.js"></script>
+  <script src="js/capcom_sync.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

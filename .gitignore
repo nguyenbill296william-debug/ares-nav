@@ -1,0 +1,20 @@
+# Python local packages & caches
+.pylibs/
+__pycache__/
+*.pyc
+
+# Raw unoptimized NASA PDS source bundles & root raw imagery/meshes
+# (Optimized runtime WebP & GLB assets live in assets/optimized/)
+Mars2020_sol*/
+/*.png
+/*.jpg
+/*.jpeg
+/*.tif
+/*.tiff
+/*.glb
+/*.mp3
+/*.json
+
+# Base64 file://-only duplicates of assets/optimized/*.glb
+js/nasa_glb_blobs.js
+js/glb_models_b64.js

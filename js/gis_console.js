@@ -18,12 +18,20 @@ window.ARES_GIS = (function () {
 
   function getImg(src, onLoad) {
     if (!src) return null;
-    if (imgCache[src]) return imgCache[src];
+    const resolvedSrc =
+      (window.ARES_BASEMAP_DATA_URLS && window.ARES_BASEMAP_DATA_URLS[src]) || src;
+    if (imgCache[src]) {
+      const cached = imgCache[src];
+      if (!cached.complete && onLoad) {
+        cached.addEventListener('load', onLoad, { once: true });
+      }
+      return cached;
+    }
     const img = new Image();
-    img.onload = () => {
-      if (onLoad) onLoad();
-    };
-    img.src = src;
+    if (onLoad) {
+      img.addEventListener('load', onLoad, { once: true });
+    }
+    img.src = resolvedSrc;
     imgCache[src] = img;
     return img;
   }
@@ -151,14 +159,15 @@ window.ARES_GIS = (function () {
 
         // 3. HiRISE DEM Slope & Topographic Contour Isolines
         if (layers.topoSlope) {
-          if (cell.slopeDeg >= 25.0) {
+          const vSlope = cell.visualSlopeDeg ?? cell.slopeDeg;
+          if (vSlope >= 25.0) {
             const sa = 0.52;
             r = r * (1 - sa) + 239 * sa;
             g = g * (1 - sa) + 68 * sa;
             b = b * (1 - sa) + 68 * sa;
             a = 1 - (1 - a) * (1 - sa);
-          } else if (cell.slopeDeg >= 15.0) {
-            const norm = (cell.slopeDeg - 15.0) / 10.0;
+          } else if (vSlope >= 15.0) {
+            const norm = (vSlope - 15.0) / 10.0;
             const sa = 0.18 + norm * 0.24;
             r = r * (1 - sa) + 245 * sa;
             g = g * (1 - sa) + 158 * sa;
@@ -363,8 +372,12 @@ window.ARES_GIS = (function () {
 
   function renderStrategicMap(canvas, state, requestRedraw) {
     if (!canvas) return;
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const hasFixed = canvas._fixedWidth && canvas._fixedHeight;
+    const rect =
+      !hasFixed && canvas.parentElement
+        ? canvas.parentElement.getBoundingClientRect()
+        : { width: canvas._fixedWidth || 880, height: canvas._fixedHeight || 440 };
+    const dpr = hasFixed ? 2 : window.devicePixelRatio || 1;
     const w = Math.max(280, Math.floor(rect.width));
     const h = Math.max(220, Math.floor(rect.height));
 
@@ -561,9 +574,19 @@ window.ARES_GIS = (function () {
         ctx.stroke();
         ctx.setLineDash([]);
 
+        const appTag = 'M2020 ROVER APPROACH (SOLS 1910→2022)';
         ctx.font = '700 8.5px "JetBrains Mono", monospace';
+        const atw = ctx.measureText(appTag).width + 12;
+        const ax = 0.028 * w;
+        const ay = 0.618 * h;
+        ctx.fillStyle = 'rgba(12, 10, 9, 0.86)';
+        ctx.fillRect(ax, ay - 8, atw, 15);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ax, ay - 8, atw, 15);
         ctx.fillStyle = '#7dd3fc';
-        ctx.fillText('M2020 ROVER APPROACH (SOLS 1910→2022)', 0.035 * w, 0.955 * h);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(appTag, ax + 6, ay);
         ctx.restore();
       }
     }
@@ -586,9 +609,16 @@ window.ARES_GIS = (function () {
     ctx.setLineDash([]);
     ctx.restore();
 
-    // 7. Render Nominal Planned GPS Route Ribbon (Dimmed during Contingency Shelter Abort)
+    // 7. Render Nominal Planned GPS Route Ribbon + Subtle Dashed Direct Scarp Reference Line
     const path = state.routeResult.path;
+    const directPath = state.routeResult.directPath;
     const contingency = state.emergencyAbortActive ? state.routeResult.contingency : null;
+    if (directPath && directPath.length > 1 && state.routingMode !== 'direct' && !contingency) {
+      ctx.save();
+      ctx.globalAlpha = 0.72;
+      drawRibbon(ctx, directPath, w, h, 'rgba(12, 10, 9, 0.70)', '#fb7185', 1.8, [5, 4], false);
+      ctx.restore();
+    }
     if (path && path.length > 1) {
       ctx.save();
       if (contingency) ctx.globalAlpha = 0.28;
@@ -597,6 +627,8 @@ window.ARES_GIS = (function () {
           ? '#22c55e'
           : state.routingMode === 'direct'
           ? '#fb7185'
+          : state.routingMode === 'science'
+          ? '#38bdf8'
           : '#f97316';
       drawRibbon(ctx, path, w, h, 'rgba(12, 10, 9, 0.94)', routeColor, 3.4, null, !contingency);
       ctx.restore();
@@ -700,6 +732,7 @@ window.ARES_GIS = (function () {
 
       wp._screenX = wx;
       wp._screenY = wy;
+      wp._labelY = wy + yOff;
     });
 
     // 8B. Render User-Plotted Custom EVA GPS Pins
@@ -747,6 +780,33 @@ window.ARES_GIS = (function () {
         cwp._screenX = cx;
         cwp._screenY = cy;
       });
+    }
+
+    // 8C. Render Clicked Terrain Inspection Reticle (when explorer clicks any spot on Mars)
+    if (state.inspectedPoint && !state._isSnapshot) {
+      const ipx = state.inspectedPoint.nx * w;
+      const ipy = state.inspectedPoint.ny * h;
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(ipx, ipy, 13, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ipx - 19, ipy);
+      ctx.lineTo(ipx - 8, ipy);
+      ctx.moveTo(ipx + 8, ipy);
+      ctx.lineTo(ipx + 19, ipy);
+      ctx.moveTo(ipx, ipy - 19);
+      ctx.lineTo(ipx, ipy - 8);
+      ctx.moveTo(ipx, ipy + 8);
+      ctx.lineTo(ipx, ipy + 19);
+      ctx.stroke();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(ipx, ipy, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     // 9. Render Live Directional 3D GPS Navigation Chevron for Astronaut Crew
@@ -817,10 +877,40 @@ window.ARES_GIS = (function () {
         ctx.fill();
         ctx.stroke();
 
+        const ev2Tag = state.buddyFaultSim ? 'EV-2 TOW' : 'EV-2';
         ctx.font = '700 8.5px "JetBrains Mono", monospace';
+        const ev2Tw = ctx.measureText(ev2Tag).width + 8;
+        const candidates = [
+          { lx: ev2X, ly: ev2Y - 14 },
+          { lx: ev2X, ly: ev2Y + 15 },
+          { lx: ev2X - ev2Tw / 2 - 9, ly: ev2Y },
+          { lx: ev2X + ev2Tw / 2 + 9, ly: ev2Y }
+        ];
+        let bestCand = candidates[0];
+        let bestClear = -1;
+        candidates.forEach((cand) => {
+          let minD = Math.hypot(cand.lx - cx, cand.ly - cy);
+          theater.waypoints.forEach((wp) => {
+            minD = Math.min(
+              minD,
+              Math.hypot(cand.lx - (wp._screenX || 0), cand.ly - (wp._labelY || 0)),
+              Math.hypot(cand.lx - (wp._screenX || 0), cand.ly - (wp._screenY || 0))
+            );
+          });
+          if (minD > bestClear) {
+            bestClear = minD;
+            bestCand = cand;
+          }
+        });
+        ctx.fillStyle = 'rgba(12, 10, 9, 0.86)';
+        ctx.fillRect(bestCand.lx - ev2Tw / 2, bestCand.ly - 6.5, ev2Tw, 13);
+        ctx.strokeStyle = state.buddyFaultSim ? 'rgba(248, 113, 113, 0.65)' : 'rgba(56, 189, 248, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bestCand.lx - ev2Tw / 2, bestCand.ly - 6.5, ev2Tw, 13);
         ctx.fillStyle = state.buddyFaultSim ? '#fecaca' : '#bae6fd';
         ctx.textAlign = 'center';
-        ctx.fillText(state.buddyFaultSim ? 'EV-2 TOW' : 'EV-2', ev2X, ev2Y + 14);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ev2Tag, bestCand.lx, bestCand.ly);
         ctx.restore();
       }
 
@@ -938,7 +1028,7 @@ window.ARES_GIS = (function () {
       ctx.restore();
 
       if (isShelteredNow) {
-        const sBadge = `✓ SHELTERED (-${contingency.shieldingPct}% SEP DOSE)`;
+        const sBadge = `SHELTERED (-${contingency.shieldingPct}% SEP DOSE)`;
         ctx.font = '700 9.5px "JetBrains Mono", monospace';
         const bw = ctx.measureText(sBadge).width + 14;
         ctx.fillStyle = 'rgba(6, 78, 59, 0.95)';
@@ -975,9 +1065,10 @@ window.ARES_GIS = (function () {
       const ty = targetWp.y * h;
 
       const t = state.ingenuityPhase || 0;
-      const lerp = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(t * 1.4));
-      const orthoX = -(ty - crewY) * 0.16 * Math.cos(t * 2.8);
-      const orthoY = (tx - crewX) * 0.16 * Math.cos(t * 2.8);
+      const lerp = 0.30 + 0.40 * (0.5 + 0.5 * Math.sin(t * 1.3));
+      const lat = 0.24 + 0.12 * Math.cos(t * 2.4);
+      const orthoX = -(ty - crewY) * lat;
+      const orthoY = (tx - crewX) * lat;
       const hx = crewX + (tx - crewX) * lerp + orthoX;
       const hy = crewY + (ty - crewY) * lerp + orthoY;
 
@@ -1113,6 +1204,9 @@ window.ARES_GIS = (function () {
     // =========================================================================
 
     // 10A. Top-Left Quantitative A* Suit-Physics Proof Pill
+    const hasTopRightInset =
+      !!(state.layers.m20Traverse && state.theaterKey === 'jezero' && window.M20_GPS_DATA && w > 520);
+    const maxLeftW = hasTopRightInset ? Math.max(200, w - 236) : w - 24;
     const savings = state.routeResult && state.routeResult.stats && state.routeResult.stats.savings;
     if (savings && w > 420) {
       ctx.save();
@@ -1128,28 +1222,108 @@ window.ARES_GIS = (function () {
         borderCol = done ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
         textCol = done ? '#a7f3d0' : '#fecaca';
       } else if (state.routingMode === 'direct') {
-        pillText = `⚠ DIRECT BASELINE: HITS ${savings.directMaxSlopeDeg}° SCARP • +${savings.o2SavedPct}% HIGHER PLSS O₂ COST`;
+        pillText = `DIRECT BASELINE [NO-GO]: HITS ${savings.directMaxSlopeDeg}° SCARP • +${savings.o2SavedPct}% HIGHER PLSS O₂`;
         borderCol = 'rgba(244, 63, 94, 0.80)';
         textCol = '#fecdd3';
       } else {
-        pillText = `A* vs DIRECT: -${savings.o2SavedPct}% PLSS O₂ (-${savings.kcalSaved} kcal) • BYPASSES ${savings.directMaxSlopeDeg}° SCARP (MAX ${state.routeResult.stats.maxSlopeDeg}°)`;
+        const modeTag =
+          state.routingMode === 'science'
+            ? 'A* MAX-SCIENCE'
+            : state.routingMode === 'rad_shelter'
+            ? 'A* RAD-SHIELD'
+            : 'A* OPTIMAL';
+        pillText = `${modeTag} vs DIRECT: -${savings.o2SavedPct}% PLSS O₂ (-${savings.kcalSaved} kcal) • BYPASSES ${savings.directMaxSlopeDeg}° SCARP (MAX ${state.routeResult.stats.maxSlopeDeg}°)`;
         borderCol =
           state.routingMode === 'rad_shelter'
             ? 'rgba(34, 197, 94, 0.70)'
+            : state.routingMode === 'science'
+            ? 'rgba(56, 189, 248, 0.70)'
             : 'rgba(249, 115, 22, 0.60)';
-        textCol = state.routingMode === 'rad_shelter' ? '#bbf7d0' : '#fed7aa';
+        textCol =
+          state.routingMode === 'rad_shelter'
+            ? '#bbf7d0'
+            : state.routingMode === 'science'
+            ? '#bae6fd'
+            : '#fed7aa';
       }
 
       ctx.font = '700 9.5px "JetBrains Mono", monospace';
-      const pw = Math.min(w - 24, ctx.measureText(pillText).width + 20);
+      const pw = Math.min(maxLeftW, ctx.measureText(pillText).width + 20);
       ctx.fillStyle = 'rgba(14, 12, 11, 0.88)';
       ctx.fillRect(12, 10, pw, 22);
       ctx.strokeStyle = borderCol;
       ctx.lineWidth = 1;
       ctx.strokeRect(12, 10, pw, 22);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(14, 10, pw - 4, 22);
+      ctx.clip();
       ctx.fillStyle = textCol;
       ctx.textBaseline = 'middle';
-      ctx.fillText(pillText, 22, 21);
+      ctx.fillText(pillText, 20, 21);
+      ctx.restore();
+
+      // Compact Visual Legend Strip right under the A* pill (width-bounded so it never touches top-right inset)
+      if (!state._isSnapshot && w > 580 && maxLeftW >= 360) {
+        const legY = 36;
+        const legH = 20;
+        const actCol =
+          state.routingMode === 'rad_shelter'
+            ? '#22c55e'
+            : state.routingMode === 'science'
+            ? '#38bdf8'
+            : state.routingMode === 'direct'
+            ? '#fb7185'
+            : '#f97316';
+        const showClickHint = maxLeftW >= 492;
+        const legW = showClickHint ? 486 : Math.min(356, maxLeftW);
+        ctx.fillStyle = 'rgba(14, 12, 11, 0.84)';
+        ctx.strokeStyle = 'rgba(120, 113, 108, 0.40)';
+        ctx.fillRect(12, legY, legW, legH);
+        ctx.strokeRect(12, legY, legW, legH);
+
+        ctx.font = '600 8.5px "JetBrains Mono", monospace';
+        ctx.textBaseline = 'middle';
+        // Item 1: Planned Route
+        ctx.strokeStyle = actCol;
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(20, legY + 10);
+        ctx.lineTo(36, legY + 10);
+        ctx.stroke();
+        ctx.fillStyle = '#e7e5e4';
+        ctx.fillText('Planned Route', 41, legY + 10.5);
+
+        // Item 2: Direct Steep Line
+        ctx.strokeStyle = '#fb7185';
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(124, legY + 10);
+        ctx.lineTo(140, legY + 10);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fda4af';
+        ctx.fillText('Direct Cliff Line', 145, legY + 10.5);
+
+        // Item 3: Walk-Back Safe Limit
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(248, legY + 10);
+        ctx.lineTo(264, legY + 10);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fcd34d';
+        ctx.fillText('Walk-Back Limit', 269, legY + 10.5);
+
+        // Item 4: Direct-Click Affordance Hint (only when wide enough)
+        if (showClickHint) {
+          ctx.fillStyle = '#93c5fd';
+          ctx.fillText('• Click terrain to inspect', 362, legY + 10.5);
+        }
+      }
       ctx.restore();
     }
 
@@ -1232,36 +1406,44 @@ window.ARES_GIS = (function () {
       }
     }
 
-    // 10C. Bottom-Left Live Cursor Scientific Terrain Probe
-    if (state.hoverProbe && w > 480) {
+    // 10D. Bottom-Right Scale & GPS Coordinates Watermark (with clean contrast pill)
+    const gpsStr = `GPS LOCK: ${theater.coords} • ELEV ${theater.baseElevM}m • HDOP 0.4m`;
+    ctx.save();
+    ctx.font = '600 9.5px "JetBrains Mono", monospace';
+    const gpsW = ctx.measureText(gpsStr).width + 16;
+    ctx.fillStyle = 'rgba(14, 12, 11, 0.84)';
+    ctx.strokeStyle = 'rgba(68, 64, 60, 0.65)';
+    ctx.lineWidth = 1;
+    ctx.fillRect(w - gpsW - 10, h - 28, gpsW, 19);
+    ctx.strokeRect(w - gpsW - 10, h - 28, gpsW, 19);
+    ctx.fillStyle = 'rgba(214, 211, 209, 0.88)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(gpsStr, w - 18, h - 18.5);
+    ctx.restore();
+
+    // 10C. Bottom-Left Live Cursor Scientific Terrain Probe (auto-hidden when Terrain Inspector card is open)
+    if (state.hoverProbe && !state.inspectedPoint && w > 540) {
       const hp = state.hoverProbe;
       const uhfTag = hp.uhfLos ? `UHF +${hp.uhfMarginDb}dB` : `UHF SHADOW (${hp.uhfMarginDb}dB)`;
       const probeStr = `PROBE ${Math.abs(hp.lat).toFixed(4)}°${hp.lat >= 0 ? 'N' : 'S'}, ${hp.lon.toFixed(4)}°E • ELEV ${Math.round(hp.elevM)}m • SLOPE ${hp.slopeDeg}° • ${hp.thermalInertia} TIU • ${uhfTag}`;
       ctx.save();
       ctx.font = '600 9.5px "JetBrains Mono", monospace';
-      const tw = Math.min(w * 0.62, ctx.measureText(probeStr).width + 18);
+      const maxProbeW = Math.max(180, w - gpsW - 34);
+      const tw = Math.min(maxProbeW, ctx.measureText(probeStr).width + 18);
       ctx.fillStyle = 'rgba(14, 12, 11, 0.88)';
       ctx.strokeStyle = hp.slopeDeg >= 25 ? 'rgba(239, 68, 68, 0.7)' : 'rgba(120, 113, 108, 0.45)';
       ctx.lineWidth = 1;
-      ctx.fillRect(12, h - 30, tw, 20);
-      ctx.strokeRect(12, h - 30, tw, 20);
+      ctx.fillRect(12, h - 28, tw, 19);
+      ctx.strokeRect(12, h - 28, tw, 19);
+      ctx.beginPath();
+      ctx.rect(14, h - 28, tw - 4, 19);
+      ctx.clip();
       ctx.fillStyle = hp.slopeDeg >= 25 ? '#fca5a5' : '#e7e5e4';
       ctx.textBaseline = 'middle';
-      ctx.fillText(probeStr, 20, h - 20);
+      ctx.fillText(probeStr, 20, h - 18.5);
       ctx.restore();
     }
-
-    // 10D. Bottom-Right Scale & GPS Coordinates Watermark
-    ctx.save();
-    ctx.font = '600 10px "JetBrains Mono", monospace';
-    ctx.fillStyle = 'rgba(214, 211, 209, 0.78)';
-    ctx.textAlign = 'right';
-    ctx.fillText(
-      `GPS LOCK: ${theater.coords} • ELEV ${theater.baseElevM}m • HDOP 0.4m`,
-      w - 14,
-      h - 14
-    );
-    ctx.restore();
 
     ctx.restore();
   }

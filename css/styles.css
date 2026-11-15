@@ -240,15 +240,28 @@ input[type="range"]::-webkit-slider-thumb {
 
   #fdfModalBody {
     overflow: visible !important;
-    padding: 16px !important;
+    padding: 14px !important;
     color: #1c1917 !important;
+  }
+
+  #fdfModalBody > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   #fdfModalBody div,
   #fdfModalBody td,
-  #fdfModalBody th {
-    background: #fafaf9 !important;
+  #fdfModalBody th,
+  #fdfModalBody span {
+    background: transparent !important;
     color: #1c1917 !important;
     border-color: #d6d3d1 !important;
+  }
+
+  #fdfModalBody img {
+    max-height: 240px !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    border: 1px solid #a8a29e !important;
   }
 }

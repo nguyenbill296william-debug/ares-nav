@@ -1,78 +1,135 @@
-# ARES-NAV // First-Place Championship Pitch, Live Bi-Directional CapCom Demo & Judge Q&A Guide
+# ARES-NAV // 7-Slide Presentation Script, Live Demo Choreography & Judge Q&A Guide
+
+Synchronized slide-for-slide with [ARES_NAV_NASA_SpaceApps_7Slide_Deck.pdf](ARES_NAV_NASA_SpaceApps_7Slide_Deck.pdf), [ARES_NAV_NASA_SpaceApps_7Slide_Deck.pptx](ARES_NAV_NASA_SpaceApps_7Slide_Deck.pptx), and [slides.html](slides.html).
 
 ---
 
-## 1. Pre-Demo 60-Second Wi-Fi Setup Checklist (Laptop Mission Control ↔ iPhone 3D Goggles)
+## Part 1: Slide-by-Slide Spoken Script (~3m 30s Total)
 
-1. **Connect to Wi-Fi:** Connect your **Laptop** and your **iPhone** to the **same venue Wi-Fi** (or turn on your iPhone’s **Personal Hotspot** and connect your laptop to it — zero internet required!).
-2. **Launch CapCom Server (1 Click):** Double-click **`START_ARES_CAPCOM.bat`** in `D:\Nasa`.
-   - Starts the multi-threaded HTTP `206` Range + Bi-Directional SSE Telemetry Relay Server on port `8080` and opens `http://localhost:8080` on your laptop.
-3. **Pair Your iPhone in 3 Seconds:**
-   - Click **`CAPCOM`** in the top-right header bar of the laptop screen.
-   - Point your iPhone camera at the **ISO-18004 QR Code** (`http://<LAN_IP>:8080/?visor=1`) and tap the link in Safari.
-   - Rotate your iPhone horizontally (**Landscape**), tap **`GYRO TRACK`**, and tap **`3D GOGGLES [V]`** (Screen Wake Lock automatically keeps the iPhone awake!).
-   - Slide your iPhone into your **DIY Stereoscopic 3D Magnifying Visor**.
-   - Look at your laptop header: the **`CAPCOM`** status dot pulses **emerald green**!
-   - **Two-Way Co-Op Magic:**
-     - **Mars → Houston (20 Hz):** As the judge turns the 3D Goggles, their live cyan FOV frustum cone rotates on **`EV-1`** across the 2D & 3D Surface Map, and Gaze-Dwell laser shots stream live!
-     - **Houston → Mars (<20 ms):** Click **`◆ MARK`** in Mode 2's top toolbar and click any rock outcrop on the laptop map — a NASA Quindar PTT beep sounds and a pulsing **Cyan `◆ CAPCOM PRIORITY TARGET` 3D AR Diamond + Directional Lens Chevrons** materialize right inside the judge's 3D Goggles!
+### Slide 01 / 07 — Cover: ARES-NAV (`0:00 – 0:25`)
+**[Stage Cue: Start on Slide 01. Hold up your DIY Smartphone 3D Visor Goggles briefly when mentioning 3D Visor Optics.]**
 
-*(Offline Fallback: Opening `index.html` directly via `file://` with zero server still runs 100% of ARES-NAV — WebGL Mars Globe, WebGL 3D Holographic Terrain Table, DEM A\* Router, SHERLOC Micro-Lab, 3D GLB meshes, Mars Audio, and 219 NASA files — completely offline!)*
-
----
-
-## 2. Word-for-Word 3-Minute Championship Pitch & Choreography
-
-> **[0:00 – 0:25] The Hook: Why Mars Navigation Is Life-or-Death**
-> *"Imagine stepping onto Mars in a 4.3-PSI pressurized spacesuit. Mars has **zero GPS satellites**, **no global dipole magnetic field**, lethal $>25^\circ$ crater scarps that burn double your oxygen, sudden **$\tau = 3.2$ dust storm whiteouts**, and unshielded solar proton storms. That is why we built **ARES-NAV** — an Orbital-to-Surface Mars Navigation System, JPL OnSight-style 3D Terrain Table, Bi-Directional CapCom Co-Op Suite, and Stereoscopic 3D Spacesuit Visor powered by **219 real local NASA Perseverance and Curiosity mission files**."*
-
-> **[0:25 – 1:15] Mode 1 & Mode 2: Orbital PNT → Real DEM A\* Routing → WebGL 3D Terrain Fly-Through**
-> *(Start in **`[1] 360° Planet Mars`**, point out `HDOP 0.4m`, then click **`JEZERO CRATER [DESCEND →]`**)*
-> *"In **Mode 1**, our WebGL globe locks onto NASA’s real relay orbiters — MRO, Odyssey, and MAVEN — computing live `HDOP` dilution of precision before descending into Jezero Crater.*
+> "Good morning, judges. We are **Project Interplanetary Explorers**, and this is **ARES-NAV**: an autonomous orbital-to-surface navigation system, suit-physics pathplanner, and stereoscopic 3D visor built for human Mars exploration.
 >
-> *In **Mode 2: Surface GPS Map**, our 8-connected A\* router evaluates real `100×68` **MRO HiRISE and MOLA Digital Elevation Models** coupled with **0.38g Pandolf-Santee suit metabolic physics**, **Dual-Crew (`EV-1 + EV-2`) 26m Buddy-Rule constraints**, and **401 MHz UHF ray-casting** — saving **24% of primary PLSS oxygen** versus a direct climb!*
-> *(Click **`3D TERRAIN`** → **`▶ FLY ROUTE`** and **`SCOUT`**!)*
-> *And just like NASA JPL’s *OnSight* holographic table, clicking **`3D TERRAIN`** extrudes all 13,266 triangles of real Jezero topography in WebGL — letting Mission Control fly a low-altitude canyon chase camera right along the elevated green A\* ribbon while watching the red straight-line path slam into vertical cliffs!"*
-
-> **[1:15 – 1:50] Stress Tests: 2-Stage Emergency Shelter + PLSS Buddy-Tow + Dust Storm Synthetic Vision**
-> *(Click **`✕ 2D ORTHO`** → **`TELEMETRY DECK`** → **`PLSS & BUDDY`** → **`⚠ BUDDY-TOW FAULT CHECK`**, then click **`ABORT SIM`**)*
-> *"Inside our **4-Tab Flight Telemetry Deck**, we verify NASA’s **15% PLSS Reserve Redline** even if `EV-1` has to tow an injured `EV-2` crewmate (+48% metabolic load), alongside diurnal **Solar `LTST` & Orbital Relay Pass windows**. And when a **Suit O₂ Leak + Solar Particle Event** hits, Master Caution triggers an automatic **2-stage sprint into Waypoint 3’s Basalt Overhang (-74% radiation dose)**."*
-> *(Click **`✓ RESET NOMINAL`**)*
-
-> **[1:50 – 2:35] The Showstopper: Two-Way CapCom AR Goggles + Dust Whiteout Synthetic Vision**
-> *(Hand your **DIY iPhone 3D Visor Goggles** to a judge! On the laptop, click **`◆ MARK`** and click an outcrop near `WP-02`)*
-> *"Please look inside our **Stereoscopic 3D Spacesuit Visor**! You are standing inside NASA’s **242-megapixel Mastcam-Z 360° panorama**. Watch this two-way Houston-to-Mars link: as you turn your head, our map tracks your 20 Hz gaze — and when I click **`◆ MARK`** on an outcrop here at Mission Control, a NASA Quindar tone fires and a **3D Cyan Priority Target Diamond** appears right in front of your eyes!*
-> *(Switch laptop to **`[3] 360° Visor HUD`**, click **`DUST WHITEOUT (τ=3.2)`**, then click **`SYNTHETIC VISION [S]`**)*
-> *Even if a $\tau = 3.2$ Martian dust storm blinds optical cameras to zero visibility, engaging **`SYNTHETIC VISION`** projects real **3D HiRISE DEM ridge wireframes and holographic ground route chevrons** straight through the storm — while Gaze-Dwell fires the **1064nm SuperCam LIBS laser**!"*
-
-> **[2:35 – 3:00] SHERLOC Deep-UV Micro-Lab (CoLD 1–7) & Printable NASA FDF Debrief**
-> *(Click **`SHERLOC LAB`**, drag the UV lens over `ROI-01` Cheyava Falls Leopard Spot, click **`+ LOG BIOSIGNATURE MICRO-ASSAY TO FDF`**, then open **`DEBRIEF (FDF)`**)*
-> *"Finally, our **SHERLOC 248.6nm Deep-UV Raman & PIXL X-Ray Micro-Lab** lets astronauts scan real `1280px` Cheyava Falls micro-imagery to resolve millimeter-scale **vivianite/greigite 'leopard spots'** and the **1595 cm⁻¹ organic carbon G-band** — scoring **Level 4 on NASA’s CoLD Biosignature Scale** and exporting a complete **NASA Flight Data File Debrief**. Thank you!"*
+> Powered by **219 real NASA Mars 2020 Perseverance and Curiosity mission files**, ARES-NAV unifies orbital satellite tracking, 3D HiRISE terrain routing that cuts suit oxygen burn by **24 percent**, and a **242-megapixel** head-tracked helmet HUD across Jezero Crater and Gale Crater."
 
 ---
 
-## 3. Judge Technical Q&A Cheat Sheet (How to Crush Deep Engineering Questions)
+### Slide 02 / 07 — Why Earth Navigation Fails Human Explorers on Mars (`0:25 – 0:55`)
+**[Advance to Slide 02]**
 
-### Q1: *"Mars doesn't have GPS satellites. How does ARES-NAV actually localize the astronaut?"*
-- **Answer:** Real human Mars surface architectures (NASA Moon-to-Mars Architecture) combine **two tiers** modeled directly in ARES-NAV:
-  1. **Orbital Radiometric Doppler / Two-Way Ranging (`Electra UHF`):** Triangulating slant-range and Doppler shift from **MRO, Odyssey, and MAVEN** provides a coarse fix (`~5–15m`), weighted by satellite elevation angle (`HDOP` shown live in Mode 1).
-  2. **Map-Relative Terrain/Visual Localization (`HiRISE Ortho + Rover UWB/UHF Anchor`):** The astronaut’s visor matches horizon ridges against MRO **HiRISE 25 cm/pixel DEMs** (visible in **`SYNTHETIC VISION`**) while ranging off the **Perseverance Rover Mast (`2.1m AGL`)**, achieving `<0.4m` tactical surface accuracy without magnetic compasses.
-
-### Q2: *"How does your A\* pathfinding & PLSS Buddy-Rule model work?"*
-- **Answer:** Our 8-connected A\* evaluates a multi-layer physical cost tensor over real `100×68` **MRO HiRISE (`DTEEC_048900_1745`) & MOLA DEM heightfields**:
-  - **0.38g Pandolf-Santee Metabolic Cost:** Models astronaut + pressurized xEMU mass (or **Rover Mule Tether** offload) in $g = 3.711\text{ m/s}^2$, slope penalties ($>15^\circ$ soft, $>25^\circ$ `NO-GO`), **THEMIS Thermal Inertia (`TIU`)** sand-sinkage penalties, **401 MHz UHF ray-casting**, and cold dawn/dusk (`LTST`) + dust (`τ`) heater draw.
-  - **NASA Dual-Crew Buddy Rule:** Enforces `EV-1` + `EV-2` co-traverse (`26m` safety tether) and verifies that a `+48%` metabolic **Buddy-Tow Fault** on the return leg never breaches NASA’s **15% PLSS O₂ Reserve Redline**.
-
-### Q3: *"What is the science behind the SHERLOC Micro-Lab and NASA CoLD Scale?"*
-- **Answer:** At Bright Angel (*Cheyava Falls*, Sol 2023), Perseverance’s **SHERLOC** (`248.6 nm` Deep-UV Raman & fluorescence spectrometer) and **PIXL** (`120 µm` X-ray fluorescence) discovered millimeter-scale reaction fronts ("leopard spots") with **iron-phosphate (`vivianite`) rims**, **iron-sulfide (`greigite`) cores**, Ca-sulfate (`bassanite`, `1014 cm⁻¹`) veins, and the **`1595 cm⁻¹` aromatic organic carbon G-band**. On NASA’s 7-level **Confidence of Life Detection (CoLD)** framework, this achieves **CoLD Level 4** (highest achievable in-situ on Mars; Levels 5–7 require Earth laboratory isotopic analysis via Mars Sample Return).
-
-### Q4: *"How does Synthetic Vision work during a Martian Dust Whiteout?"*
-- **Answer:** During regional dust storms, atmospheric optical depth rises from $\tau \approx 0.4$ to $\tau > 3.0$, causing Mie scattering that reduces visual contrast of crater rims to near zero. Because ARES-NAV stores the georeferenced `100×68` MRO HiRISE DEM locally and tracks suit IMU orientation + UWB range, toggling **`SYNTHETIC VISION [S]`** projects real-time 3D elevation-sampled ridge wireframes (color-coded by $>15^\circ$ scarp hazard) and ground-locked route chevrons directly onto the astronaut's binocular waveguide visor.
+> "Why can’t future Mars astronauts navigate the way we do on Earth, or even the way Apollo crews did on the Moon? Four physical realities stand in the way:
+>
+> First, Mars has **no global GPS constellation and no planetary dipole magnetic field**—meaning a magnetic compass is useless, and steep canyon walls hide the habitat within tens of meters.
+> Second, inside a **4.3-PSI pressurized spacesuit** at **0.38g**, the shortest straight line is rarely the safest route—climbing scarps steeper than **20 degrees** or sinking into low-thermal-inertia sand drifts spikes metabolic oxygen burn and CO2 scrubber load.
+> Third, unshielded **Solar Energetic Particle storms** and **tau-3.2 dust whiteouts** can blind optical cameras in minutes.
+> And fourth, with up to a **44-minute round-trip communication delay** to Earth, astronauts cannot wait for Houston. Survival requires zero-latency, onboard autonomy."
 
 ---
 
-## 4. Quick Voice Commands & Keyboard Shortcuts
-Click **`MIC`** in the top bar and speak naturally (or use hotkeys):
-- **Modes:** `"Planet Mars"` (`[1]`), `"Surface Map"` (`[2]`), `"Helmet Visor"` (`[3]`), `"Science Log"` (`[4]`)
-- **3D Terrain & Optics:** `"3D Terrain"` (`[T]`), `"Fly Route"`, `"Synthetic Vision"` (`[S]`), `"Dust Whiteout"`, `"3D Goggles"` (`[V]`)
-- **Science & Safety:** `"Sherloc Lab"`, `"Fire Laser"` (`[L]`), `"Log Sample"`, `"Aerial Scout"`, `"Emergency Abort"`, `"Reset Nominal"`, `"Mission Debrief"`
+### Slide 03 / 07 — One Integrated Stack from 400 km Orbit to 120 µm Rock Grains (`0:55 – 1:25`)
+**[Advance to Slide 03]**
+
+> "To solve this, we engineered a single offline-ready software stack spanning four synchronized modes—from **400-kilometer orbit down to 120-micrometer rock grains**:
+>
+> **Mode 1** renders an 8K WebGL Mars globe with MGS MOLA altimetry, tracking real-time relay geometry across MRO, Mars Odyssey, and MAVEN.
+> **Mode 2** descends into a tactical GIS console and **JPL OnSight-style WebGL 3D terrain table**, fusing HiRISE elevation, CRISM mineralogy, THEMIS sand-footing data, RIMFAX ground-penetrating radar, and a 3D flying Ingenuity aerial scout.
+> **Mode 3** puts the astronaut inside **242-megapixel Mastcam-Z panoramas** with spatial AR beacons, dust-whiteout wireframes, and SuperCam laser spectroscopy.
+> And **Mode 4** delivers a **SHERLOC Deep-UV Raman and PIXL X-ray micro-lab** that compiles every rock core directly into a printable **NASA Flight Data File**—all in vanilla ES6 JavaScript and custom WebGL shaders, with zero proprietary API keys or cloud lock-in."
+
+---
+
+### Slide 04 / 07 — Physics-Driven Routing That Cuts Suit Oxygen Burn by 24% (`1:25 – 2:05`)
+**[Advance to Slide 04]**
+
+> "Slide 4 shows the core safety engine behind Mode 2. Instead of drawing geometric straight lines across lethal cliffs, ARES-NAV solves an 8-connected graph weighted by **0.38g Pandolf-Santee spacesuit energetics**, slope grade, THEMIS sand-slip risk, radiation exposure, and 401-megahertz UHF line-of-sight—while enforcing NASA’s **Dual-Crew Buddy-Tow Flight Rule**, guaranteeing a **15 percent oxygen reserve** even if one astronaut must tow an injured partner back to base.
+>
+> Across Jezero Crater Site 093, while a direct line crosses loose sand traps, hits a hazardous **28.4-degree scarp**, and burns **256 liters** of oxygen, our A-star pathfinder caps slope at **14.2 degrees** and cuts suit oxygen consumption to **195 liters—a 24 percent reduction**.
+>
+> And if an oxygen regulator leak or solar proton storm strikes mid-EVA, our walk-back safety ring contracts in real time, triggering a **two-stage contingency sprint** into **Waypoint 3’s Basalt Overhang**—cutting radiation dose by **74 percent** under 2.8 meters of rock before staging recovery to the habitat."
+
+---
+
+### Slide 05 / 07 — Turning Any Smartphone into an IMU Head-Tracked 3D Mars Visor (`2:05 – 2:45`)
+**[Advance to Slide 05. Invite a judge to look through the 3D Goggles if demonstrating live.]**
+
+> "Because pressurized spacesuit gloves make touchscreens impractical on foot, Slide 5 shows how we turned an ordinary smartphone and low-cost magnifying lenses into a **hands-free, head-tracked 3D Mars Visor**.
+>
+> First, standard smartphone Euler angles suffer 90-degree gimbal flips when tilted into landscape goggles—so we compute the full 3D rotation matrix forward vector (`R * [0, 0, -1]^T`) directly from the phone’s IMU for smooth, zero-drift head tracking at 60 frames per second.
+> Second, astronauts operate the visor **without touching the screen**: holding the center gaze reticle on an outcrop for **2.0 seconds** fires a simulated **1064-nanometer SuperCam LIBS laser**, and during a **tau-3.2 dust whiteout**, **Synthetic Vision** projects 3D HiRISE DEM ridge wireframes straight through the obscured sky.
+> Third, our **20-hertz bi-directional CapCom link** pairs the goggles with the laptop Mission Control console—tracking the astronaut’s live viewing cone on the map while letting the habitat operator click **MARK** on any outcrop to project a 3D AR target diamond and voice advisory straight into the astronaut’s eyes."
+
+---
+
+### Slide 06 / 07 — Grounded in 219 Authentic NASA Surface & Orbital Datasets (`2:45 – 3:15`)
+**[Advance to Slide 06]**
+
+> "Nothing in ARES-NAV is generic placeholder art. Every terrain elevation, rover roll-and-pitch telemetry point across Perseverance’s **45.25-kilometer traverse**, and mineral signature is grounded in **219 indexed NASA datasets**—from the **29,517-pixel Butler Landing Mastcam-Z mosaic** to Curiosity’s **Sol 4462 Mount Sharp boxwork ridges** and Perseverance’s real **SuperCam microphone wind recordings**.
+>
+> In our **SHERLOC 248.6-nanometer Deep-UV Raman and PIXL XRF lab**, crews inspect real Cheyava Falls micro-imagery—resolving iron-phosphate vivianite and greigite redox rims co-located with the **1600-inverse-centimeter organic carbon G-band** to score **Level 4 out of 7 on NASA’s Confidence of Life Detection scale**, then export a complete **NASA Flight Data File** and RFC 7946 GeoJSON manifest."
+
+---
+
+### Slide 07 / 07 — From Analogue EVA Field Trials to Every Classroom on Earth (`3:15 – 3:45`)
+**[Advance to Slide 07]**
+
+> "Finally, ARES-NAV is built for immediate impact both in human spaceflight analogs and global STEM classrooms.
+>
+> By swapping the elevation raster and gravity constant from **0.38g Mars to 0.16g Moon**, our exact same metabolic A-star planner and visor HUD adapt directly to **Artemis Lunar South Pole traverses**, **NASA CHAPEA** Mars habitat simulations, and desert EVA field trials.
+> At the same time, replacing `$3,500` headsets with a **`$5` smartphone lens viewer** and **100 percent offline browser execution** means any student or researcher on Earth can step onto Jezero Crater today with zero paid APIs and zero setup.
+>
+> We invite you to test our live deployment—or look inside our 3D Visor Goggles right now while we mark a live target from Mission Control. Thank you, and we welcome your questions."
+
+---
+
+## Part 2: Complete Judge Q&A Bank (Questions Judges Ask & How to Answer)
+
+### Q1: "Would astronauts actually use this when they're exploring Mars?"
+- **Answer:** Yes—not by holding a laptop or tapping a touchscreen in bulky `4.3 psi` pressurized gloves, but across the exact **three operational layers** NASA’s EVA & Human Surface Mobility program uses:
+  1. **Why Earth Mission Control Fails on Mars:** With an **8–22 minute one-way light-time delay** (up to 44 minutes round-trip), Houston cannot micromanage turns, slope hazards, or consumables in real time like on Apollo or ISS. Autonomous onboard metabolic routing and walk-back safety rings are mandatory flight-safety software.
+  2. **Three Context-Matched Interfaces:**
+     - **Pressurized Rover / Habitat Console (Modes 1 & 2):** Directly mirrors **NASA JPL *OnSight***, **NASA *MMGIS***, and **MIT/NASA *SEXTANT***—used by the Intra-Vehicular (`IVA`) support astronaut inside the rover/habitat to plan oxygen-optimal traverses on HiRISE DEMs, deploy aerial scouts, and drop `MARK` targets for the surface crew.
+     - **Hands-Free Surface EVA Visor (Mode 3):** Mirrors **NASA *SUITS*** waveguide HUD standards—operated via **voice commands, 2-second gaze-dwell targeting, and one-key Declutter** so gloved astronauts keep both hands free on rocky terrain.
+     - **Automated Post-EVA Debrief (Mode 4 & FDF):** Auto-compiles JSC Flight Data Files and GeoJSON manifests, saving scarce crew time.
+  3. **Honest TRL Framing:** Today ARES-NAV is a **TRL-4 human-in-the-loop prototype** running in WebGL on real PDS datasets; for flight (`TRL 8–9`), the same A\* metabolic engine and HUD symbology compile onto radiation-hardened suit/rover avionics fed by live visual-inertial LiDAR SLAM, UWB rover ranging, and PLSS sensors.
+
+### Q2: "Mars has no GPS satellites and no magnetic field. How does ARES-NAV actually localize the astronaut and their heading?"
+- **Answer:** Real Mars human architectures combine two tiers modeled directly in ARES-NAV:
+  1. **Coarse Radiometric Orbital Fix (`~5–15 m`):** Two-way UHF Doppler and slant-range trilateration (`Electra` transceivers) during passes of **MRO, Mars Odyssey, and MAVEN**, weighted by satellite geometry (`PDOP / HDOP` in Mode 1).
+  2. **Fine Tactical Surface Lock (`<0.4 m` & `<0.5°` heading):** Ultra-Wideband (`UWB`) / `401 MHz` time-of-flight ranging anchored to the **pressurized rover or habitat mast**, fused with **Visual-Inertial Odometry (`VIO`) and skyline ridge matching** against georeferenced **25 cm/pixel MRO HiRISE DEMs**—requiring zero magnetic compasses.
+
+### Q3: "How did you calculate the 24% oxygen savings on Slide 4, and how does the cost function work?"
+- **Answer:** Our 8-connected A\* solver evaluates every DEM grid transition using `J(e) = Δd * [1 + w_slope(θ) + w_slip(TIU) + w_rad(SEP) + w_uhf]`, coupled to **Pandolf-Santee walking metabolic equations scaled to Martian gravity (`3.71 m/s²`, `0.38g`)** for a suited astronaut:
+  - Slopes above `15°` incur nonlinear metabolic penalties, and `>25°` scarps are hard `NO-GO` walls.
+  - Low thermal inertia (`<130 TIU` from Mars Odyssey THEMIS) flags unconsolidated aeolian sand drifts where boot sinkage increases energy burn.
+  - Across Jezero Site 093, the naive straight line climbs a `28.4°` scarp and crosses sand traps (`256 L O₂`), whereas ARES-NAV routes through a `14.2°` bedrock pass (`195 L O₂`, saving `61 L` or `24%`) and also verifies a **50-trial Monte Carlo P50/P95 O₂ envelope** plus NASA’s **15% Buddy-Tow reserve redline**.
+
+### Q4: "What happens if an emergency hits mid-EVA—like a Solar Particle Event or a suit O₂ leak?"
+- **Answer:** Clicking **`ABORT SIM`** demonstrates our **2-Stage Contingency Protocol**:
+  1. Unlike Galatic Cosmic Rays, acute **Solar Energetic Particle (`SEP`) proton storms** can deliver dangerous doses within tens of minutes on Mars’s thin `0.6 kPa` atmosphere.
+  2. If the habitat is farther than immediate exposure limits allow, ARES-NAV dynamically shrinks the PLSS walk-back envelope and sprints the crew into the nearest **pre-surveyed natural rock overhang (`WP-03 Megabreccia Alcove`, 2.8–3.8 m basalt shielding)**—attenuating proton flux by **74%**—before staging a controlled **Leg-2 recovery** back to `HAB-01` (or dispatching the pressurized rover).
+
+### Q5: "On Slide 5, what does `R · [0, 0, -1]^T` mean, and why did standard phone orientation break?"
+- **Answer:** Browser `DeviceOrientationEvent` reports Euler angles (`alpha, beta, gamma`) calibrated for holding a phone flat in portrait mode. When you rotate a smartphone `90°` sideways into landscape VR goggles and look up or across the horizon, `beta` approaches `±90°`, causing **Euler gimbal lock**—where azimuth suddenly flips `180°`. We solved this by constructing the full orthogonal 3D rotation matrix `R = Rz(alpha) * Rx(beta) * Ry(gamma) * R_screen` and projecting the camera’s optical `-Z` axis (`R · [0, 0, -1]^T`), extracting true spherical azimuth and elevation with zero gimbal flips.
+
+### Q6: "During a `τ = 3.2` dust storm whiteout, if optical cameras are blinded, how does Synthetic Vision still show the terrain?"
+- **Answer:** Just like commercial aviation **Synthetic Vision Systems (`SVS`)** used by pilots in zero-visibility fog, Synthetic Vision does **not** rely on live optical camera contrast during the storm. Because the georeferenced **MRO HiRISE DEM heightfield** is stored locally in onboard memory and suit pose is tracked via **IMU + UWB rover ranging + radar altimetry**, ARES-NAV projects the stored 3D elevation mesh and hazard-colored ridge wireframes directly onto the visor waveguide—letting the crew navigate safely back to shelter when optical visibility drops near zero.
+
+### Q7: "On Slide 6, why does Cheyava Falls score Level 4 out of 7 on NASA's CoLD scale—why not Level 7?"
+- **Answer:** NASA’s **Confidence of Life Detection (`CoLD`)** framework has 7 strict tiers:
+  - **Levels 1–4** can be achieved *in situ* on Mars: detecting a biosignature-relevant signal (`L1`, `1600 cm⁻¹` organic G-band), ruling out spacecraft contamination (`L2`), confirming habitable aqueous context (`L3`, `CaSO₄` veins), and evaluating abiotic vs. biological plausibility (`L4`, millimeter-scale `vivianite/greigite` redox "leopard spots" formed at low temperatures).
+  - **Levels 5–7** require independent confirmation, isotopic fractionation (`δ¹³C`), and ruling out all non-biological syntheses using synchrotron/mass-spectrometry labs on Earth (**Mars Sample Return**) or a full human base lab. Scoring it `CoLD 4/7` reflects Perseverance’s actual July 2024 science team assessment.
+
+### Q8: "Which parts of your 219 datasets are real NASA data versus simulated models?"
+- **Answer:** *(Be 100% transparent—judges reward scientific honesty)*
+  - **100% Real NASA Archival Data:** All 219 indexed local files—the `29,517×8,199` Mastcam-Z 360° mosaic, Perseverance Sol 0–2023 GPS/RMC traverse (`45.25 km`) and roll/pitch telemetry, Curiosity Sol 4462 Gale Boxwork panoramas (`PIA26696`), MRO HiRISE ortho-imagery (`PIA26374`) & MOLA DEM relief, SHERLOC/WATSON Cheyava Falls micro-scans, Perseverance SuperCam Mars wind audio, and all 5 NASA 3D CAD meshes (including the 9,124-triangle Ingenuity flight mesh).
+  - **Physics-Informed Simulation Layers:** Real-time `0.38g` Pandolf-Santee suit metabolic burn, live orbital pass propagation (`PDOP`), interactive LIBS/Raman spectral synthesis calibrated to endmember rock oxides, RIMFAX radargram visualization along arbitrary user pins, and two-player CapCom co-op telemetry.
+
+### Q9: "How does the entire system run 100% offline in a browser with zero cloud servers or API keys?"
+- **Answer:** Remote field stations—whether desert EVA analogs like Utah MDRS, NASA CHAPEA, or classrooms with restricted internet—cannot depend on paid cloud map tiles or external servers. We pre-compiled the DEM elevation matrices, Perseverance odometry, 9 HiRISE/Mastcam-Z WebP basemap textures, Mars wind audio, and Draco-decoded 3D Ingenuity CAD buffers into self-contained JavaScript modules rendered via custom **WebGL 1.0 GLSL shaders** and **HTML5 Canvas**—so even double-clicking `index.html` offline via `file://` runs at 60 FPS with zero network calls.
+
+### Q10: "How easily can ARES-NAV scale to NASA's Artemis Lunar South Pole missions?"
+- **Answer:** Because the physics engine is parameterized rather than hardcoded to Mars, adapting ARES-NAV to **Artemis III / IV at Shackleton Rim** requires only three configuration swaps:
+  1. Replace the MRO HiRISE DEM raster with **LRO LOLA `5 m/px` lunar south pole topography**.
+  2. Change gravitational acceleration in the Pandolf-Santee metabolic solver from **`3.71 m/s²` (`0.38g` Mars)** to **`1.62 m/s²` (`0.16g` Moon)**.
+  3. Swap the dust-tau atmospheric scattering shader for **low-angle `1.5°` solar illumination & Permanently Shadowed Region (`PSR`) thermal/lighting constraints**—making the exact same visor HUD and CapCom co-op architecture immediately usable for lunar EVA analog testing.

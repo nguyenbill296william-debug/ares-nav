@@ -13,8 +13,26 @@ window.ARES_HUD = (function () {
 
   const BUTLER_360_PINS = [
     {
-      yawDeg: 58,
-      pitchY: 0.43,
+      yawDeg: 42,
+      pitchY: 0.098,
+      label: 'Kodiak Delta Butte',
+      detail: 'Erosional delta remnant preserving ancient lakebed strata',
+      type: 'sci',
+      distM: 2400,
+      elevM: '+38m'
+    },
+    {
+      yawDeg: 78,
+      pitchY: 0.48,
+      label: 'Basalt Float Boulder',
+      detail: 'Vesicular crater-floor float target in rover workspace',
+      type: 'nav',
+      distM: 6.5,
+      elevM: '-1.1m'
+    },
+    {
+      yawDeg: 108,
+      pitchY: 0.092,
       label: 'Western Delta Scarp',
       detail: 'Ancient Jezero river delta front (~2.2 km NW)',
       type: 'sci',
@@ -22,19 +40,10 @@ window.ARES_HUD = (function () {
       elevM: '+45m'
     },
     {
-      yawDeg: 148,
-      pitchY: 0.44,
-      label: 'Kodiak Delta Butte',
-      detail: 'Erosional delta remnant preserving lakebed strata',
-      type: 'sci',
-      distM: 2400,
-      elevM: '+38m'
-    },
-    {
-      yawDeg: 252,
-      pitchY: 0.42,
+      yawDeg: 332,
+      pitchY: 0.105,
       label: 'Santa Cruz Hill',
-      detail: 'Crater-floor volcanic remnant (~2.5 km SE)',
+      detail: 'Crater-floor remnant hill (~2.5 km SE)',
       type: 'nav',
       distM: 2500,
       elevM: '+52m'
@@ -317,10 +326,11 @@ window.ARES_HUD = (function () {
 
       const eyeW = w / 2;
       const padX = Math.max(8, eyeW * 0.028);
-      const padY = Math.max(10, h * 0.038);
+      const topPad = 52;
+      const botPad = 14;
       const lensW = eyeW - padX * 2;
-      const lensH = h - padY * 2;
-      const cornerR = Math.min(44, lensW * 0.14);
+      const lensH = Math.max(120, h - topPad - botPad);
+      const cornerR = Math.min(40, lensW * 0.12);
 
       for (let eyeIdx = 0; eyeIdx < 2; eyeIdx++) {
         const offsetX = eyeIdx * eyeW;
@@ -329,7 +339,7 @@ window.ARES_HUD = (function () {
         const hudParallax = eyeIdx === 0 ? 4.2 : -4.2;
 
         ctx.save();
-        ctx.translate(offsetX + padX, padY);
+        ctx.translate(offsetX + padX, topPad);
 
         ctx.beginPath();
         if (ctx.roundRect) {
@@ -360,31 +370,16 @@ window.ARES_HUD = (function () {
         ctx.restore();
       }
 
-      // Center Nose-Bridge Septum & IPD Alignment Reticle
+      // Center Nose-Bridge Septum (confined strictly between top & bottom bezel so controls stay clear)
       ctx.save();
       ctx.strokeStyle = 'rgba(249, 115, 22, 0.35)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.moveTo(w / 2, 0);
-      ctx.lineTo(w / 2, h);
+      ctx.moveTo(w / 2, topPad);
+      ctx.lineTo(w / 2, h - botPad);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      ctx.fillStyle = 'rgba(18, 16, 14, 0.92)';
-      ctx.fillRect(w / 2 - 106, 4, 212, 18);
-      ctx.strokeStyle = 'rgba(249, 115, 22, 0.55)';
-      ctx.strokeRect(w / 2 - 106, 4, 212, 18);
-      ctx.fillStyle = '#fb923c';
-      ctx.font = '700 9px "JetBrains Mono", monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const statusText = state.capcomRole === 'visor'
-        ? '3D GOGGLES • CAPCOM CO-OP TX'
-        : state.gyroActive
-        ? '3D VR GOGGLES • IMU GYRO LOCK'
-        : '3D VR GOGGLES • 63mm IPD';
-      ctx.fillText(statusText, w / 2, 13);
       ctx.restore();
 
       ctx.restore();
@@ -654,10 +649,17 @@ window.ARES_HUD = (function () {
   function drawTopCompassTape(ctx, w, h, theater, wp, state) {
     ctx.save();
     const pShift = (state._hudParallaxPx || 0) * 0.65;
-    const tapeW = Math.min(480, w * (state._isStereoEye ? 0.76 : 0.48));
+    let tapeW;
+    if (state._isStereoEye) {
+      tapeW = Math.min(320, w * 0.58);
+    } else if (!state.hudDecluttered && w >= 680) {
+      tapeW = Math.min(440, Math.max(190, (w / 2 - 364) * 2));
+    } else {
+      tapeW = Math.min(440, w * 0.68);
+    }
     const centerX = w / 2 + pShift;
     const tapeX = centerX - tapeW / 2;
-    const tapeY = state._isStereoEye ? 24 : 12;
+    const tapeY = state._isStereoEye ? 14 : 12;
     const tapeH = 28;
 
     ctx.fillStyle = 'rgba(18, 16, 14, 0.88)';
@@ -666,7 +668,8 @@ window.ARES_HUD = (function () {
     ctx.fillRect(tapeX, tapeY, tapeW, tapeH);
     ctx.strokeRect(tapeX, tapeY, tapeW, tapeH);
 
-    const heading = Math.round((((state.hudYawDeg || 0) % 360) + 360) % 360);
+    const rawHeading = (((state.hudYawDeg || 0) % 360) + 360) % 360;
+    const heading = Math.round(rawHeading);
     const cardinals = {
       0: 'N',
       45: 'NE',
@@ -683,9 +686,10 @@ window.ARES_HUD = (function () {
     ctx.rect(tapeX + 2, tapeY, tapeW - 4, tapeH);
     ctx.clip();
 
-    for (let deg = heading - 65; deg <= heading + 65; deg += 5) {
+    const startDeg = Math.floor((rawHeading - 65) / 5) * 5;
+    for (let deg = startDeg; deg <= rawHeading + 65; deg += 5) {
       const norm = ((deg % 360) + 360) % 360;
-      const px = centerX + ((deg - heading) / 65) * (tapeW / 2);
+      const px = centerX + ((deg - rawHeading) / 65) * (tapeW / 2);
 
       const isMajor = norm % 15 === 0;
       ctx.strokeStyle = cardinals[norm]
@@ -699,7 +703,7 @@ window.ARES_HUD = (function () {
       ctx.lineTo(px, tapeY + tapeH);
       ctx.stroke();
 
-      if (isMajor) {
+      if (isMajor && px >= tapeX + 16 && px <= tapeX + tapeW - 16) {
         const lbl = cardinals[norm] || `${String(norm).padStart(3, '0')}°`;
         ctx.fillStyle = cardinals[norm] ? '#fb923c' : '#e7e5e4';
         ctx.font = '700 9.5px "JetBrains Mono", monospace';
@@ -767,7 +771,7 @@ window.ARES_HUD = (function () {
     if (state.visorSyntheticVision || dustTau >= 1.8) {
       const pillText = state.visorSyntheticVision
         ? `SYNTHETIC DEM LIDAR LOCK • τ=${dustTau.toFixed(2)}`
-        : `⚠ DUST WHITEOUT (τ=${dustTau.toFixed(2)}) • ENGAGE SYNTH VISION`;
+        : `[CAUTION] DUST WHITEOUT (τ=${dustTau.toFixed(2)}) • ENGAGE SYNTH VISION`;
       ctx.font = '700 8.5px "JetBrains Mono", monospace';
       const pw = Math.min(w - 24, ctx.measureText(pillText).width + 18);
       const py = tapeY + tapeH + 23;
@@ -816,7 +820,7 @@ window.ARES_HUD = (function () {
         const pyRaw = proj.isWide
           ? proj.dy + pin.pitchY * proj.drawH
           : proj.dy + pin.pitchY * proj.baseH;
-        const py = clamp(pyRaw, 92, h - 38);
+        const py = clamp(pyRaw, 94, h - 38);
         visible.push({ pin, idx, px, py, distM });
       });
 
@@ -857,6 +861,11 @@ window.ARES_HUD = (function () {
           subW = ctx.measureText(pin.detail).width;
         }
 
+        const isFullVisor = !state._isStereoEye && !state.hudDecluttered && w >= 680;
+        if (isFullVisor && ((px < 352 && py < 196) || (px > w - 170 && py < 186))) {
+          return;
+        }
+
         const pillW = Math.min(w - 20, Math.max(titleW + badgeW + 34, isFocused ? subW + 20 : 0));
         const pillH = isFocused && pin.detail ? 36 : 23;
 
@@ -868,8 +877,12 @@ window.ARES_HUD = (function () {
         prevPillRight = bx + pillW;
         prevTier = tier;
 
-        const stemLen = 18 + tier * 28;
-        const by = Math.max(62, py - stemLen - pillH);
+        const stemLen = 16 + tier * 24;
+        const hasSubPill = state.visorSyntheticVision || (state.dustTau || 0) >= 1.8;
+        let minTopY = state._isStereoEye ? 72 : hasSubPill ? 84 : 66;
+        if (isFullVisor && bx < 352) minTopY = Math.max(minTopY, 198);
+        if (isFullVisor && bx + pillW > w - 170) minTopY = Math.max(minTopY, 188);
+        const by = clamp(Math.max(minTopY, py - stemLen - pillH), minTopY, h - pillH - 14);
 
         // Sleek precision surface reticle
         ctx.strokeStyle = borderRgba;
@@ -884,12 +897,22 @@ window.ARES_HUD = (function () {
         ctx.fill();
 
         // Slender vertical leader stem
-        ctx.strokeStyle = borderRgba;
-        ctx.lineWidth = 1.1;
-        ctx.beginPath();
-        ctx.moveTo(px, py - (isFocused ? 7.5 : 5.5));
-        ctx.lineTo(px, by + pillH);
-        ctx.stroke();
+        const rDot = isFocused ? 7.5 : 5.5;
+        if (by + pillH < py - rDot) {
+          ctx.strokeStyle = borderRgba;
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(px, py - rDot);
+          ctx.lineTo(clamp(px, bx + 6, bx + pillW - 6), by + pillH);
+          ctx.stroke();
+        } else if (by > py + rDot) {
+          ctx.strokeStyle = borderRgba;
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(px, py + rDot);
+          ctx.lineTo(clamp(px, bx + 6, bx + pillW - 6), by);
+          ctx.stroke();
+        }
 
         // Compact Frosted Glass Capsule
         roundRectPath(ctx, bx, by, pillW, pillH, 7);
@@ -1006,7 +1029,9 @@ window.ARES_HUD = (function () {
         const bw = Math.min(w - 20, Math.max(tw1, tw2) + 20);
         const bh = 36;
         const bx = clamp(px - bw / 2, 10, w - bw - 10);
-        const by = Math.max(62, py - 34 - bh);
+        const hasSubPill = state.visorSyntheticVision || (state.dustTau || 0) >= 1.8;
+        const minCapY = state._isStereoEye ? 72 : hasSubPill ? 84 : 68;
+        const by = Math.max(minCapY, py - 34 - bh);
 
         roundRectPath(ctx, bx, by, bw, bh, 8);
         ctx.fillStyle = 'rgba(8, 22, 34, 0.90)';

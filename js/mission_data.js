@@ -13,10 +13,10 @@ window.ARES_THEATERS = {
     baseLat: -5.0846,
     baseLon: 137.8512,
     baseElevM: -3940,
-    basemapImg: 'assets/optimized/gale_pia23179_orbital_1600.webp',
+    basemapImg: 'assets/optimized/gale_hirise_clean_1600.webp',
     basemapVariants: [
+      { id: 'hirise_gale', label: 'HiRISE Clean Satellite', url: 'assets/optimized/gale_hirise_clean_1600.webp', isRef: false },
       { id: 'pia23179', label: 'PIA23179 4K Terrain', url: 'assets/optimized/gale_pia23179_orbital_1600.webp', isRef: false },
-      { id: 'hirise_gale', label: 'HiRISE Satellite', url: 'assets/optimized/gale_hirise_clean_1600.webp', isRef: false },
       { id: 'pia18391', label: 'Official NASA Map (PIA18391)', url: 'assets/optimized/jpegPIA18391_1600.webp', isRef: true }
     ],
     crismOverlayImg: 'assets/optimized/jezero_clean_dem_1600.webp',
@@ -104,8 +104,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 45.1, MgO: 11.4, FeOT: 17.8, SO3: 9.5, Al2O3: 9.0, CaO: 7.2 },
         arPins: [
-          { yawDeg: 192, pitchY: 0.50, label: 'Gediz Vallis Ascent', detail: 'Least-effort switchback corridor (<12° grade)', type: 'nav', distM: 145, elevM: '+19m' },
-          { yawDeg: 244, pitchY: 0.39, label: 'Sulfate Unit Scarp', detail: '27.4° steep cliff — flagged No-Go on HiRISE DEM', type: 'hazard', distM: 310, elevM: '+68m' }
+          { yawDeg: 196, pitchY: 0.44, label: 'Gediz Vallis Ascent', detail: 'Least-effort switchback corridor (<12° grade)', type: 'nav', distM: 145, elevM: '+19m' },
+          { yawDeg: 238, pitchY: 0.25, label: 'Sulfate Unit Scarp', detail: '27.4° steep cliff — flagged No-Go on HiRISE DEM', type: 'hazard', distM: 310, elevM: '+68m' }
         ]
       },
       {
@@ -143,9 +143,9 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 41.2, MgO: 13.8, FeOT: 16.4, SO3: 13.7, Al2O3: 8.1, CaO: 6.8 },
         arPins: [
-          { yawDeg: 322, pitchY: 0.68, label: 'Wheel Trench Test', detail: '280 TIU sulfate crust (1.6 cm grouser depth)', type: 'sci', distM: 3.4, elevM: '-0.2m' },
-          { yawDeg: 356, pitchY: 0.33, label: 'Gale Northern Rim', detail: '28.5 km horizon optical tau reference', type: 'nav', distM: 28500, elevM: '+1840m' },
-          { yawDeg: 286, pitchY: 0.62, label: 'Eolian Sand Hollow', detail: 'Loose drift (<120 TIU) — stay on bedrock spine', type: 'hazard', distM: 12.0, elevM: '-1.4m' }
+          { yawDeg: 324, pitchY: 0.62, label: 'Wheel Trench Test', detail: '280 TIU sulfate crust (1.6 cm grouser depth)', type: 'sci', distM: 3.4, elevM: '-0.2m' },
+          { yawDeg: 356, pitchY: 0.22, label: 'Gale Northern Rim', detail: '28.5 km horizon optical tau reference', type: 'nav', distM: 28500, elevM: '+1840m' },
+          { yawDeg: 292, pitchY: 0.58, label: 'Eolian Sand Hollow', detail: 'Loose drift (<120 TIU) — stay on bedrock spine', type: 'hazard', distM: 12.0, elevM: '-1.4m' }
         ]
       },
       {
@@ -477,7 +477,7 @@ window.ARES_THEATERS = {
           siteDrive: 'RMC 92_0 // ZCAM04499 & SCAM01024',
           coords: '18.4356°N, 77.2329°E (-1,937m)'
         },
-        hudHeadingDeg: 190,
+        hudHeadingDeg: 74,
         outcropNotes:
           'Massive angular Noachian megabreccia boulder documented in 45-frame Mastcam-Z multispectral cube (N0930000ZCAM04499, filters ZL0–ZL6/ZR0–ZR6) and Sol 2024 SuperCam RMI laser target (N0930000SCAM01024). Overhang provides 74% radiation shielding.',
         samplingProtocol: [
@@ -488,8 +488,8 @@ window.ARES_THEATERS = {
         ],
         oxides: { SiO2: 50.9, MgO: 14.1, FeOT: 15.6, SO3: 2.1, Al2O3: 10.4, CaO: 6.2 },
         arPins: [
-          { yawDeg: 172, pitchY: 0.48, label: 'Megabreccia Shelter', detail: 'SH-JV-1 overhang: -74% GCR/SEP shielding', type: 'shelter', distM: 4.5, elevM: '+2.8m' },
-          { yawDeg: 210, pitchY: 0.62, label: 'SuperCam LIBS Target', detail: 'Sol 2024 RMI pit array (SCAM01024)', type: 'sci', distM: 2.8, elevM: '+0.4m' }
+          { yawDeg: 52, pitchY: 0.42, label: 'Megabreccia Shelter', detail: 'SH-JV-1 overhang: -74% GCR/SEP shielding', type: 'shelter', distM: 4.5, elevM: '+2.8m' },
+          { yawDeg: 92, pitchY: 0.54, label: 'SuperCam LIBS Target', detail: 'Sol 2024 RMI pit array (SCAM01024)', type: 'sci', distM: 2.8, elevM: '+0.4m' }
         ]
       },
       {

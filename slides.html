@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARES-NAV — Project Interplanetary Explorers | NASA Space Apps Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #f4f3ee;
+      --paper-card: #ffffff;
+      --navy: #0d1b2a;
+      --navy-mid: #162a40;
+      --ink: #11161f;
+      --ink-body: #374151;
+      --ink-muted: #6b7280;
+      --rule: #d5d2c8;
+      --rule-dark: rgba(255, 255, 255, 0.16);
+      --vermilion: #c83e2b;
+      --cobalt: #1d4ed8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #1a1a1a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .mono {
+      font-family: 'IBM Plex Mono', 'Consolas', monospace;
+    }
+
+    body.deck-screen {
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #deckStage {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: center center;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    }
+
+    .slide {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide-light {
+      background: var(--paper);
+      color: var(--ink);
+      padding: 56px 84px 52px 84px;
+    }
+
+    .slide-navy {
+      background: var(--navy);
+      color: #f8fafc;
+      padding: 56px 84px 52px 84px;
+    }
+
+    body.deck-screen .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+    }
+
+    body.deck-screen .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    /* Editorial Running Header */
+    .running-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 18px;
+      border-bottom: 1.5px solid var(--ink);
+      flex-shrink: 0;
+    }
+
+    .slide-navy .running-head {
+      border-bottom-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .rh-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .rh-num {
+      color: var(--vermilion);
+      font-weight: 700;
+    }
+
+    .slide-navy .rh-num {
+      color: #f26a4f;
+    }
+
+    .rh-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+    }
+
+    .slide-navy .rh-right {
+      color: #94a3b8;
+    }
+
+    /* Editorial Headlines */
+    .ed-title {
+      font-size: 50px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      margin-top: 26px;
+    }
+
+    .slide-navy .ed-title {
+      color: #ffffff;
+    }
+
+    .ed-sub {
+      font-size: 21px;
+      font-weight: 400;
+      line-height: 1.45;
+      color: var(--ink-body);
+      margin-top: 10px;
+      max-width: 1380px;
+    }
+
+    .slide-navy .ed-sub {
+      color: #cbd5e1;
+    }
+
+    /* Clean Museum Image Plates (Caption outside or clean strip, never neon HUD pills) */
+    .plate {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .plate-img {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #cbc7bc;
+      background: #0d1117;
+      box-shadow: 0 10px 28px rgba(17, 22, 31, 0.10);
+    }
+
+    .slide-navy .plate-img {
+      border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.42);
+    }
+
+    .plate-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .plate-cap {
+      font-size: 13px;
+      line-height: 1.35;
+      color: var(--ink-muted);
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .plate-cap .mono {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .plate-cap strong {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .slide-navy .plate-cap {
+      color: #94a3b8;
+    }
+
+    .slide-navy .plate-cap strong {
+      color: #f1f5f9;
+    }
+
+    /* Editorial Tables */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .spec-table th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--ink-muted);
+      padding: 10px 12px;
+      border-bottom: 1.5px solid var(--ink);
+    }
+
+    .spec-table td {
+      padding: 14px 12px;
+      font-size: 16px;
+      line-height: 1.4;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+    }
+
+    /* Running Footer */
+    .running-foot {
+      padding-top: 14px;
+      border-top: 1px solid var(--rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--ink-muted);
+      flex-shrink: 0;
+    }
+
+    .slide-navy .running-foot {
+      border-top-color: var(--rule-dark);
+      color: #94a3b8;
+    }
+
+    /* Interactive Screen Navigation Bar */
+    #deckHud {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(13, 27, 42, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      color: #fff;
+    }
+
+    .hud-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .hud-btn:hover {
+      background: var(--vermilion);
+      border-color: var(--vermilion);
+    }
+
+    .dot-nav {
+      display: flex;
+      gap: 6px;
+      padding: 0 6px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      border: none;
+      cursor: pointer;
+    }
+    .dot.active {
+      background: #fff;
+      width: 22px;
+      border-radius: 999px;
+    }
+
+    @media print {
+      @page {
+        size: 1920px 1080px;
+        margin: 0;
+      }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      html, body, body.deck-screen {
+        width: 1920px !important;
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+        background: #ffffff !important;
+      }
+      #deckStage {
+        width: 1920px !important;
+        height: auto !important;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+      .slide, body.deck-screen .slide {
+        position: relative !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .slide:last-of-type {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+      #deckHud {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="deck-screen">
+
+  <div id="deckStage">
+
+    <!-- ======================================================================
+         SLIDE 01 / 07 — COVER (ASYMMETRIC EDITORIAL SPLIT ON NASA PRUSSIAN NAVY)
+         ====================================================================== -->
+    <section class="slide slide-navy active" data-slide="0" style="padding: 0; flex-direction: row;">
+      <!-- Left Editorial Title Column (46%) -->
+      <div style="width: 46%; padding: 64px 68px 56px 84px; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid rgba(255,255,255,0.14);">
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.18);">
+            <img src="assets/optimized/logo_dark_hud.webp" alt="Interplanetary Explorers" style="height: 46px; width: auto; object-fit: contain;" />
+            <span class="mono" style="font-size: 12px; letter-spacing: 0.08em; color: #94a3b8;">01 / 07</span>
+          </div>
+
+          <div class="mono" style="font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #f26a4f; margin-top: 48px; font-weight: 600;">
+            NASA Space Apps Challenge · Project Demonstration
+          </div>
+
+          <h1 style="font-size: 92px; font-weight: 800; letter-spacing: -0.04em; line-height: 0.96; color: #ffffff; margin-top: 14px;">
+            ARES-NAV
+          </h1>
+
+          <p style="font-size: 25px; font-weight: 500; line-height: 1.38; color: #e2e8f0; margin-top: 22px;">
+            Orbital-to-Surface GPS, Suit-Physics Pathfinding &amp; Stereoscopic 3D Visor Optics for Human Mars Exploration
+          </p>
+
+          <p style="font-size: 17px; line-height: 1.6; color: #94a3b8; margin-top: 22px;">
+            An autonomous browser-based flight console built on 219 real Mars 2020 Perseverance and MSL Curiosity mission files—guiding astronauts safely across Jezero Crater and Gale Crater.
+          </p>
+        </div>
+
+        <!-- Clean Specification Index at Bottom-Left -->
+        <div style="border-top: 1px solid rgba(255,255,255,0.18); padding-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px; font-size: 14px;">
+          <div>
+            <div class="mono" style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em;">Team</div>
+            <div style="color: #ffffff; font-weight: 600; margin-top: 3px;">Project Interplanetary Explorers</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em;">Primary Landing Sectors</div>
+            <div style="color: #ffffff; font-weight: 600; margin-top: 3px;">Jezero (Site 093) &amp; Gale Crater</div>
+          </div>
+          <div style="grid-column: span 2;">
+            <div class="mono" style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em;">Live Public Deployment (Desktop &amp; Mobile 3D Goggles)</div>
+            <div class="mono" style="color: #f26a4f; font-weight: 600; margin-top: 3px; font-size: 14.5px;">https://nguyenbill296william-debug.github.io/ares-nav/</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Full-Height Visual Showcase (54%) -->
+      <div style="width: 54%; background: #071019; padding: 48px 56px; display: grid; grid-template-rows: minmax(0, 1.12fr) minmax(0, 0.88fr); gap: 24px;">
+        <div class="plate">
+          <div class="plate-img">
+            <img src="assets/slides/shot_globe.webp" alt="ARES-NAV Orbital Relay Mode" />
+          </div>
+          <div class="plate-cap">
+            <span><strong>Mode I — Orbital Relay Constellation:</strong> 8K Mars WebGL globe with MRO, Odyssey &amp; MAVEN trilateration</span>
+            <span class="mono">PDOP 1.4</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px; min-height: 0;">
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/slides/shot_terrain3d.webp" alt="ARES-NAV 3D Terrain DEM" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Mode II — 3D HiRISE DEM Table</strong></span>
+              <span class="mono">-24% O₂</span>
+            </div>
+          </div>
+
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/slides/shot_visor_libs.webp" alt="ARES-NAV 360 Visor HUD" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Mode III — 360° Helmet Visor HUD</strong></span>
+              <span class="mono">242 MP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SLIDE 02 / 07 — INTRODUCTION & PROBLEM DEFINITION (EDITORIAL ALABASTER)
+         ====================================================================== -->
+    <section class="slide slide-light" data-slide="1">
+      <div class="running-head">
+        <div class="rh-left">
+          <span class="rh-num mono">01</span>
+          <span>Introduction &amp; The Martian EVA Problem</span>
+        </div>
+        <div class="rh-right mono">
+          <span>Project Interplanetary Explorers</span>
+          <span>02 / 07</span>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ed-title">Why Earth Navigation Fails Human Explorers on Mars</h2>
+        <p class="ed-sub">
+          Future surface crews step onto a planet with no satellite navigation, no dipolar magnetic field, strict spacesuit oxygen budgets, and up to 44-minute round-trip communication delays.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 0.88fr 1.12fr; gap: 52px; flex: 1; min-height: 0; margin: 28px 0 22px 0;">
+        <!-- Left: Authentic NASA Rover Field Photography -->
+        <div style="display: grid; grid-template-rows: minmax(0, 1.08fr) minmax(0, 0.92fr); gap: 20px; min-height: 0;">
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/optimized/pia26344-perseverance-selfie-at-cheyava_1280.webp" alt="Perseverance at Cheyava Falls" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 1 — Neretva Vallis (Jezero):</strong> Perseverance at Cheyava Falls outcrop</span>
+              <span class="mono">NASA/JPL PIA26344</span>
+            </div>
+          </div>
+
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/optimized/PIA26696_mount_sharp_boxwork_1280.webp" alt="Curiosity Mount Sharp Boxwork" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 2 — Mount Sharp (Gale):</strong> Polygonal groundwater fracture ridges</span>
+              <span class="mono">NASA/JPL PIA26696</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Clean Hairline-Separated Thesis Statements -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; border-top: 1px solid var(--rule); min-height: 0;">
+          <div style="display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--rule);">
+            <div class="mono" style="font-size: 22px; font-weight: 600; color: var(--vermilion);">01</div>
+            <div>
+              <h3 style="font-size: 22px; font-weight: 700; color: var(--ink);">No Global GNSS or Magnetic Compass</h3>
+              <p style="font-size: 16.5px; line-height: 1.5; color: var(--ink-body); margin-top: 5px;">
+                Without GPS satellites or a planetary magnetosphere, steep canyon walls and crater rims obscure visual landmarks within tens of meters of the habitat.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--rule);">
+            <div class="mono" style="font-size: 22px; font-weight: 600; color: var(--vermilion);">02</div>
+            <div>
+              <h3 style="font-size: 22px; font-weight: 700; color: var(--ink);">Shortest Distance Is Rarely the Safest Suit Route</h3>
+              <p style="font-size: 16.5px; line-height: 1.5; color: var(--ink-body); margin-top: 5px;">
+                Inside a pressurized 4.3 psi spacesuit at 0.38g, ascending &gt;20° slopes or crossing loose &lt;130 TIU sand drifts rapidly accelerates metabolic O₂ consumption and CO₂ scrubber load.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--rule);">
+            <div class="mono" style="font-size: 22px; font-weight: 600; color: var(--vermilion);">03</div>
+            <div>
+              <h3 style="font-size: 22px; font-weight: 700; color: var(--ink);">Solar Particle Storms &amp; Dust Whiteouts</h3>
+              <p style="font-size: 16.5px; line-height: 1.5; color: var(--ink-body); margin-top: 5px;">
+                Unshielded Solar Energetic Particle (SEP) events and &tau; = 3.2 dust storms require immediate diversion to natural rock overhangs and synthetic terrain wireframes.
+              </p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 56px 1fr; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--rule);">
+            <div class="mono" style="font-size: 22px; font-weight: 600; color: var(--vermilion);">04</div>
+            <div>
+              <h3 style="font-size: 22px; font-weight: 700; color: var(--ink);">Zero-Latency Autonomy Under Light-Time Delay</h3>
+              <p style="font-size: 16.5px; line-height: 1.5; color: var(--ink-body); margin-top: 5px;">
+                With 8 to 22 minutes of one-way delay to Earth, crews and local habitat CapCom operators need self-contained pathplanning, walk-back safety rings, and in-situ rock assay.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="running-foot">
+        <span><strong>Design Thesis:</strong> ARES-NAV integrates orbital positioning, metabolic pathplanning, AR helmet optics, and rover spectroscopy in one offline-ready console.</span>
+        <span class="mono">MARS EVA INFORMATICS</span>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SLIDE 03 / 07 — 4-MODE ARCHITECTURE (SWISS 4-COLUMN GRID)
+         ====================================================================== -->
+    <section class="slide slide-light" data-slide="2">
+      <div class="running-head">
+        <div class="rh-left">
+          <span class="rh-num mono">02</span>
+          <span>System Architecture &amp; Four Operational Modes</span>
+        </div>
+        <div class="rh-right mono">
+          <span>ARES-NAV Software Stack</span>
+          <span>03 / 07</span>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ed-title">One Integrated Stack from 400 km Orbit to 120 &mu;m Rock Grains</h2>
+        <p class="ed-sub">
+          Four synchronized views connect planetary satellite relay geometry directly to surface route planning, first-person visor augmented reality, and microscopic astrobiology.
+        </p>
+      </div>
+
+      <!-- 4-Column Architectural Breakdown with Clean Vertical Hairlines -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; flex: 1; min-height: 0; margin: 30px 0 24px 0;">
+        <!-- Col 1 -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; padding-right: 24px; border-right: 1px solid var(--rule); min-height: 0;">
+          <div>
+            <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 10px;">MODE 01 · ORBITAL PNT</div>
+            <h3 style="font-size: 24px; font-weight: 800; line-height: 1.2; min-height: 58px; margin-bottom: 16px;">360° Mars Globe &amp; Relay Constellation</h3>
+            <div class="plate-img" style="height: 268px; margin-bottom: 20px;">
+              <img src="assets/slides/shot_globe.webp" alt="Mode 1 Mars Globe" />
+            </div>
+            <p style="font-size: 16px; line-height: 1.56; color: var(--ink-body);">
+              Custom WebGL sphere rendering 8K Viking imagery and MGS MOLA laser altimetry while tracking real-time MRO, Mars Odyssey, and MAVEN relay passes over Jezero and Gale.
+            </p>
+          </div>
+          <div class="mono" style="font-size: 12.5px; color: var(--ink-muted); padding-top: 12px; border-top: 1px solid var(--rule);">
+            WebGL GLSL · 3-Sat Trilateration
+          </div>
+        </div>
+
+        <!-- Col 2 -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; padding-right: 24px; border-right: 1px solid var(--rule); min-height: 0;">
+          <div>
+            <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 10px;">MODE 02 · SURFACE GIS &amp; 3D DEM</div>
+            <h3 style="font-size: 24px; font-weight: 800; line-height: 1.2; min-height: 58px; margin-bottom: 16px;">Tactical GPS Map &amp; OnSight 3D Terrain</h3>
+            <div class="plate-img" style="height: 268px; margin-bottom: 20px;">
+              <img src="assets/slides/shot_terrain3d.webp" alt="Mode 2 Surface GPS and 3D DEM" />
+            </div>
+            <p style="font-size: 16px; line-height: 1.56; color: var(--ink-body);">
+              Multi-layer HiRISE, CRISM mineral, and THEMIS footing overlays paired with an interactive 100×68 WebGL 3D terrain mesh, Ingenuity scout, RIMFAX radar, and NASA 3D GLB models.
+            </p>
+          </div>
+          <div class="mono" style="font-size: 12.5px; color: var(--ink-muted); padding-top: 12px; border-top: 1px solid var(--rule);">
+            A* Pathfinder · Walk-Back Envelope
+          </div>
+        </div>
+
+        <!-- Col 3 -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; padding-right: 24px; border-right: 1px solid var(--rule); min-height: 0;">
+          <div>
+            <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 10px;">MODE 03 · SPATIAL AR OPTICS</div>
+            <h3 style="font-size: 24px; font-weight: 800; line-height: 1.2; min-height: 58px; margin-bottom: 16px;">360° Helmet Visor &amp; Stereoscopic 3D Goggles</h3>
+            <div class="plate-img" style="height: 268px; margin-bottom: 20px;">
+              <img src="assets/slides/shot_visor_libs.webp" alt="Mode 3 360 Visor HUD" />
+            </div>
+            <p style="font-size: 16px; line-height: 1.56; color: var(--ink-body);">
+              242-MP Mastcam-Z panoramas with pixel-locked outcrop markers, DEM dust-whiteout wireframes, simulated 1064 nm SuperCam LIBS laser spectroscopy, and smartphone stereo VR.
+            </p>
+          </div>
+          <div class="mono" style="font-size: 12.5px; color: var(--ink-muted); padding-top: 12px; border-top: 1px solid var(--rule);">
+            3D Matrix IMU · 20 Hz CapCom Sync
+          </div>
+        </div>
+
+        <!-- Col 4 -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; min-height: 0;">
+          <div>
+            <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 10px;">MODE 04 · ASTROBIOLOGY</div>
+            <h3 style="font-size: 24px; font-weight: 800; line-height: 1.2; min-height: 58px; margin-bottom: 16px;">SHERLOC Micro-Lab &amp; Flight Data Debrief</h3>
+            <div class="plate-img" style="height: 268px; margin-bottom: 20px;">
+              <img src="assets/slides/shot_microlab.webp" alt="Mode 4 SHERLOC Micro Lab" />
+            </div>
+            <p style="font-size: 16px; line-height: 1.56; color: var(--ink-body);">
+              Interactive 248.6 nm Deep-UV Raman and PIXL 120 &mu;m XRF microscope for biosignature triage, backed by a searchable 219-file NASA archive and printable Flight Data File (FDF).
+            </p>
+          </div>
+          <div class="mono" style="font-size: 12.5px; color: var(--ink-muted); padding-top: 12px; border-top: 1px solid var(--rule);">
+            CoLD Scale Assay · JSON &amp; PDF Export
+          </div>
+        </div>
+      </div>
+
+      <div class="running-foot">
+        <span><strong> Engineering Stack:</strong> Vanilla ES6 JavaScript, Custom WebGL Shaders, HTML5 2D Canvas, Google &lt;model-viewer&gt;, Web Audio &amp; Web Speech APIs — zero proprietary map keys.</span>
+        <span class="mono">ZERO CLOUD LOCK-IN</span>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SLIDE 04 / 07 — METABOLIC A* PATHFINDING & SURVIVAL (EDITORIAL ALABASTER)
+         ====================================================================== -->
+    <section class="slide slide-light" data-slide="3">
+      <div class="running-head">
+        <div class="rh-left">
+          <span class="rh-num mono">03</span>
+          <span>Algorithmic Rigor &amp; Crew Contingency Safety</span>
+        </div>
+        <div class="rh-right mono">
+          <span>0.38g Metabolic A* Engine</span>
+          <span>04 / 07</span>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ed-title">Physics-Driven Routing That Cuts Suit Oxygen Burn by 24%</h2>
+        <p class="ed-sub">
+          Rather than plotting straight geometric lines across hazardous scarps, ARES-NAV solves an 8-connected graph weighted by Martian spacesuit energetics and radiation exposure.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 636px; gap: 52px; flex: 1; min-height: 0; margin: 26px 0 22px 0;">
+        <!-- Left: Equation, Benchmark Table & Contingency Logic -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; min-height: 0;">
+          <div style="background: #eae7df; border-left: 4px solid var(--vermilion); padding: 18px 22px; border-radius: 0 6px 6px 0;">
+            <div class="mono" style="font-size: 12px; font-weight: 600; color: var(--vermilion); text-transform: uppercase; letter-spacing: 0.07em;">
+              Edge Traversal Cost Function
+            </div>
+            <div class="mono" style="font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 8px;">
+              J(e) = &Delta;d &middot; [ 1 + w<sub>slope</sub>(&theta;) + w<sub>slip</sub>(TIU) + w<sub>rad</sub>(SEP) + w<sub>uhf</sub> ]
+            </div>
+            <p style="font-size: 15px; line-height: 1.48; color: var(--ink-body); margin-top: 8px;">
+              Coupled to 0.38g Pandolf–Santee walking metabolic rates and NASA's <strong>Dual-Crew Buddy-Tow Flight Rule</strong> (&gt;15% reserve O₂ required at habitat return).
+            </p>
+          </div>
+
+          <!-- Clean Academic Comparison Table -->
+          <div>
+            <table class="spec-table">
+              <thead>
+                <tr>
+                  <th>Traverse Metric (Jezero Site 093)</th>
+                  <th>Direct Line</th>
+                  <th>ARES-NAV A*</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Total Suit O₂ Consumed</strong></td>
+                  <td class="mono" style="color: var(--ink-muted);">256 L</td>
+                  <td class="mono" style="color: var(--vermilion); font-weight: 700;">195 L (-24%)</td>
+                </tr>
+                <tr>
+                  <td><strong>Peak Slope Encountered</strong></td>
+                  <td class="mono" style="color: var(--ink-muted);">28.4° (Scarp)</td>
+                  <td class="mono" style="color: var(--ink); font-weight: 700;">14.2° (Safe)</td>
+                </tr>
+                <tr>
+                  <td><strong>Aeolian Sand Traps (&lt;130 TIU)</strong></td>
+                  <td class="mono" style="color: var(--ink-muted);">Crossed</td>
+                  <td class="mono" style="color: var(--ink); font-weight: 700;">Bypassed</td>
+                </tr>
+                <tr>
+                  <td><strong>SEP Proton Storm Dose</strong></td>
+                  <td class="mono" style="color: var(--ink-muted);">100% Exposed</td>
+                  <td class="mono" style="color: var(--vermilion); font-weight: 700;">-74% (WP-03 Shelter)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="border-top: 1px solid var(--rule); padding-top: 14px;">
+            <h4 style="font-size: 17px; font-weight: 700; color: var(--ink);">2-Stage Emergency Shelter Diversion</h4>
+            <p style="font-size: 15.5px; line-height: 1.48; color: var(--ink-body); margin-top: 4px;">
+              During a simulated O₂ regulator leak and solar particle storm, the walk-back safety ring contracts in real time—sprinting the crew into <strong>WP-03 Basalt Overhang</strong> (2.8 m regolith shielding) before staging recovery to <strong>HAB-01</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Right: Dual Live Captures -->
+        <div style="display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; min-height: 0;">
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/slides/shot_terrain3d.webp" alt="3D Holographic Terrain Route Comparison" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 3 — 3D DEM Terrain Table:</strong> Metabolic A* vs. scarp baseline</span>
+              <span class="mono">13,266 TRIS</span>
+            </div>
+          </div>
+
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/slides/shot_map_abort.webp" alt="2-Stage Emergency Shelter Diversion" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 4 — Contingency Abort:</strong> Walk-back ring &amp; WP-03 shelter sprint</span>
+              <span class="mono">PLSS BURN-DOWN</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="running-foot">
+        <span><strong>Subsurface &amp; Aerial Integration:</strong> Includes simulated Ingenuity forward LiDAR scout and 15 m RIMFAX ground-penetrating radargrams along the traverse.</span>
+        <span class="mono">SAFETY-CRITICAL PATHPLANNING</span>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SLIDE 05 / 07 — 3D GOGGLES & CAPCOM SYNC (NASA PRUSSIAN NAVY PLATE)
+         ====================================================================== -->
+    <section class="slide slide-navy" data-slide="4">
+      <div class="running-head">
+        <div class="rh-left">
+          <span class="rh-num mono">04</span>
+          <span>Hardware Creativity &amp; Spatial Augmented Reality</span>
+        </div>
+        <div class="rh-right mono">
+          <span>Smartphone Stereo VR + CapCom Link</span>
+          <span>05 / 07</span>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ed-title">Turning Any Smartphone into an IMU Head-Tracked 3D Mars Visor</h2>
+        <p class="ed-sub">
+          ARES-NAV pairs low-cost magnifying-lens phone goggles with a laptop Mission Control station for live, two-person cooperative exploration.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 636px 1fr; gap: 52px; flex: 1; min-height: 0; margin: 26px 0 22px 0;">
+        <!-- Left: Visor HUD & Stereoscopic 3D Goggles Plates -->
+        <div style="display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; min-height: 0;">
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/slides/shot_visor_libs.webp" alt="360 Visor HUD with Anchored AR Capsules" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 5 — 360° Visor HUD:</strong> Anchored AR pins &amp; 1064 nm LIBS spectrum</span>
+              <span class="mono">ZERO DRIFT</span>
+            </div>
+          </div>
+
+          <div class="plate">
+            <div class="plate-img">
+              <img src="assets/slides/shot_vr_sbs.webp" alt="Stereoscopic Side-by-Side 3D Goggles Mode" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 6 — Stereo 3D Goggles:</strong> Binocular parallax + DEM wireframe</span>
+              <span class="mono">60 FPS STEREO</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: 3 Clean Engineering Sections on Navy -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; border-top: 1px solid var(--rule-dark); min-height: 0;">
+          <div style="padding: 24px 0; border-bottom: 1px solid var(--rule-dark);">
+            <div class="mono" style="font-size: 12.5px; color: #f26a4f; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;">
+              01 · Gimbal-Lock-Free 3D Attitude Math
+            </div>
+            <h3 style="font-size: 24px; font-weight: 700; color: #ffffff; margin-top: 6px;">
+              Natural Physical Head-Turn Control
+            </h3>
+            <p style="font-size: 16.5px; line-height: 1.55; color: #cbd5e1; margin-top: 8px;">
+              Entering 3D Goggles mode synchronously unlocks smartphone IMU sensors and computes the 3D camera forward-vector (<span class="mono">R&middot;[0,0,-1]ᵀ</span>)—eliminating 90° landscape Euler gimbal flips across yaw and pitch.
+            </p>
+          </div>
+
+          <div style="padding: 24px 0; border-bottom: 1px solid var(--rule-dark);">
+            <div class="mono" style="font-size: 12.5px; color: #f26a4f; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;">
+              02 · Hands-Free Gaze Assay &amp; Whiteout Wireframes
+            </div>
+            <h3 style="font-size: 24px; font-weight: 700; color: #ffffff; margin-top: 6px;">
+              Operate Without Touching the Screen
+            </h3>
+            <p style="font-size: 16.5px; line-height: 1.55; color: #cbd5e1; margin-top: 8px;">
+              Aligning the center reticle over any geological marker for 2.0 seconds fires a hands-free SuperCam laser assay. During &tau; = 3.2 dust storms, Synthetic Vision projects the 3D DEM ridge horizon directly over the obscured sky.
+            </p>
+          </div>
+
+          <div style="padding: 24px 0;">
+            <div class="mono" style="font-size: 12.5px; color: #f26a4f; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;">
+              03 · Bi-Directional 20 Hz CapCom Telemetry
+            </div>
+            <h3 style="font-size: 24px; font-weight: 700; color: #ffffff; margin-top: 6px;">
+              Two-Player Mission Control Co-Op
+            </h3>
+            <p style="font-size: 16.5px; line-height: 1.55; color: #cbd5e1; margin-top: 8px;">
+              As the wearer turns their head, the laptop map tracks their live viewing cone at 20 Hz. Clicking <strong>MARK</strong> on any map outcrop projects a 3D AR waypoint diamond and synthesized voice advisory straight into the goggles.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="running-foot">
+        <span><strong>Spectral Visor Modes:</strong> Natural True-Color · False-Color Geologic Stretch · THEMIS Thermal IR · Red/Cyan 3D Anaglyph · Hands-Free Voice Commands</span>
+        <span class="mono">HTTPS MOBILE IMU READY</span>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SLIDE 06 / 07 — AUTHENTIC NASA DATASETS & ASTROBIOLOGY (ALABASTER)
+         ====================================================================== -->
+    <section class="slide slide-light" data-slide="5">
+      <div class="running-head">
+        <div class="rh-left">
+          <span class="rh-num mono">05</span>
+          <span>Scientific Validity &amp; NASA Mission Data Provenance</span>
+        </div>
+        <div class="rh-right mono">
+          <span>219 Indexed Mission Files</span>
+          <span>06 / 07</span>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ed-title">Grounded in 219 Authentic NASA Surface &amp; Orbital Datasets</h2>
+        <p class="ed-sub">
+          Every panorama, rover attitude reading, mineral overlay, and Raman/XRF spectral signature is derived from real Mars 2020, Curiosity, and orbital archives.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 0.94fr 1.06fr; gap: 48px; flex: 1; min-height: 0; margin: 26px 0 22px 0;">
+        <!-- Left: SHERLOC Deep-UV Raman & PIXL XRF Lab Plate + Summary Callout -->
+        <div style="display: flex; flex-direction: column; gap: 20px; min-height: 0;">
+          <div class="plate" style="flex: 1;">
+            <div class="plate-img">
+              <img src="assets/slides/shot_microlab.webp" alt="SHERLOC Deep-UV Raman & PIXL XRF Lab" />
+            </div>
+            <div class="plate-cap">
+              <span><strong>Fig. 7 — SHERLOC &amp; PIXL Astrobiology Lab:</strong> Cheyava Falls redox spots (CoLD Level 4/7)</span>
+              <span class="mono">248.6 nm UV</span>
+            </div>
+          </div>
+
+          <div style="background: #ffffff; border: 1px solid var(--rule); border-radius: 6px; padding: 18px 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <div class="mono" style="font-size: 24px; font-weight: 700; color: var(--vermilion);">1600 cm⁻¹</div>
+              <div style="font-size: 14.5px; line-height: 1.45; color: var(--ink-body); margin-top: 4px;">
+                SHERLOC organic aromatic G-band co-located with vivianite/greigite redox rims in CaSO₄ veins.
+              </div>
+            </div>
+            <div style="border-left: 1px solid var(--rule); padding-left: 20px;">
+              <div class="mono" style="font-size: 24px; font-weight: 700; color: var(--navy);">45.25 km</div>
+              <div style="font-size: 14.5px; line-height: 1.45; color: var(--ink-body); margin-top: 4px;">
+                Complete Perseverance Sol 0–2023 traverse odometry, RMC coordinates, and roll/pitch telemetry.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Structured NASA Archival Provenance Table -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between; min-height: 0;">
+          <table class="spec-table">
+            <thead>
+              <tr>
+                <th style="width: 30%;">Mission / Source</th>
+                <th style="width: 18%;">Archive</th>
+                <th>Operational Role in ARES-NAV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Mars 2020 Optical Suite</strong><br /><span style="font-size: 13.5px; color: var(--ink-muted);">Jezero Crater Site 093</span></td>
+                <td class="mono" style="color: var(--vermilion); font-weight: 600;">190+ Frames</td>
+                <td>29,517×8,199 Mastcam-Z 360° Butler mosaic, Navcam stereo pairs (56), SHERLOC/WATSON macro scans (47), and Hazcam arrays (27).</td>
+              </tr>
+              <tr>
+                <td><strong>SuperCam, SHERLOC &amp; MEDA</strong><br /><span style="font-size: 13.5px; color: var(--ink-muted);">Spectroscopy &amp; Acoustics</span></td>
+                <td class="mono" style="color: var(--vermilion); font-weight: 600;">Sol 0–2023</td>
+                <td>1064 nm LIBS &amp; 248.6 nm UV-Raman mineral signatures, SuperCam RMI laser-pit targets, Martian wind audio &amp; 45.25 km odometry.</td>
+              </tr>
+              <tr>
+                <td><strong>MSL Curiosity Rover</strong><br /><span style="font-size: 13.5px; color: var(--ink-muted);">Mount Sharp Boxwork</span></td>
+                <td class="mono" style="color: var(--vermilion); font-weight: 600;">PIA26696 (7)</td>
+                <td>Sol 4462 Gale Crater groundwater fracture ridge panoramas, wheel-track close-ups, and 3D stratigraphic unit maps.</td>
+              </tr>
+              <tr>
+                <td><strong>MRO, Odyssey &amp; MGS</strong><br /><span style="font-size: 13.5px; color: var(--ink-muted);">HiRISE · CRISM · MOLA</span></td>
+                <td class="mono" style="font-weight: 600;">Orbital GIS</td>
+                <td>PIA26374 Rim Drive ortho-basemap, MOLA global elevation DEM, hydrated carbonate/sulfate spectral zones &amp; THEMIS thermal inertia.</td>
+              </tr>
+              <tr>
+                <td><strong>NASA 3D Resources</strong><br /><span style="font-size: 13.5px; color: var(--ink-muted);">Engineering GLB Assets</span></td>
+                <td class="mono" style="font-weight: 600;">5 Meshes</td>
+                <td>Interactive 3D inspection of the xEMU Spacesuit, Perseverance Rover, Ingenuity Helicopter, Jezero Crater DEM &amp; Martian outcrop.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="background: #eae7df; padding: 14px 18px; border-radius: 6px; font-size: 15px; color: var(--ink);">
+            <strong> NASA Flight Data File (FDF) Output:</strong> Every logged rock core and laser assay compiles automatically into a structured, printable mission debrief report and exportable JSON archive.
+          </div>
+        </div>
+      </div>
+
+      <div class="running-foot">
+        <span><strong>Acoustic Authenticity:</strong> Embeds Perseverance's real SuperCam microphone recording of Martian wind gusts across Jezero Crater.</span>
+        <span class="mono">DATA/MISSION_MANIFEST.JSON</span>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SLIDE 07 / 07 — IMPACT, SCALABILITY & LIVE ACCESS (EDITORIAL CLOSING)
+         ====================================================================== -->
+    <section class="slide slide-light" data-slide="6">
+      <div class="running-head">
+        <div class="rh-left">
+          <span class="rh-num mono">06</span>
+          <span>Impact, Scalability &amp; Live Verification</span>
+        </div>
+        <div class="rh-right mono">
+          <span>Moon-to-Mars &amp; Global STEM</span>
+          <span>07 / 07</span>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="ed-title">From Analogue EVA Field Trials to Every Classroom on Earth</h2>
+        <p class="ed-sub">
+          ARES-NAV bridges mission-grade planetary GIS with universally accessible hardware—ready for human spaceflight testing and STEM education today.
+        </p>
+      </div>
+
+      <!-- Top 3 Impact Columns -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin: 32px 0; padding-bottom: 30px; border-bottom: 1px solid var(--rule);">
+        <div style="padding-right: 24px; border-right: 1px solid var(--rule);">
+          <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 8px;">01 · HUMAN SPACEFLIGHT</div>
+          <h3 style="font-size: 25px; font-weight: 800; margin-bottom: 10px;">Artemis &amp; Analogue Ready</h3>
+          <p style="font-size: 16.5px; line-height: 1.55; color: var(--ink-body);">
+            By swapping DEM elevation rasters and gravity constants (0.38g Mars to 0.16g Moon), the same metabolic A* planner and visor HUD adapt directly to <strong>Artemis Lunar South Pole</strong> traverses, <strong>CHAPEA</strong>, and desert EVA field tests.
+          </p>
+        </div>
+
+        <div style="padding-right: 24px; border-right: 1px solid var(--rule);">
+          <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 8px;">02 · DEMOCRATIZED STEM</div>
+          <h3 style="font-size: 25px; font-weight: 800; margin-bottom: 10px;">$5 Smartphone Mars Field Trip</h3>
+          <p style="font-size: 16.5px; line-height: 1.55; color: var(--ink-body);">
+            Removes the barrier of $3,500 VR headsets. Students anywhere in the world can insert a phone into simple cardboard lenses, stand inside a 242-MP Mars panorama, fire LIBS lasers, and run two-player Mission Control exercises.
+          </p>
+        </div>
+
+        <div>
+          <div class="mono" style="font-size: 13px; font-weight: 600; color: var(--vermilion); margin-bottom: 8px;">03 · OPEN &amp; SELF-CONTAINED</div>
+          <h3 style="font-size: 25px; font-weight: 800; margin-bottom: 10px;">100% Offline Browser Resilience</h3>
+          <p style="font-size: 16.5px; line-height: 1.55; color: var(--ink-body);">
+            Built with zero paid API keys, zero external map servers, and zero installation steps—ensuring reliable execution in isolated habitat networks, classrooms, or judge browsers worldwide.
+          </p>
+        </div>
+      </div>
+
+      <!-- Bottom Navy Verification Banner -->
+      <div style="flex: 1; min-height: 0; background: var(--navy); border-radius: 8px; padding: 34px 44px; color: #ffffff; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 36px; align-items: center;">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <img src="assets/optimized/logo_dark_hud.webp" alt="Interplanetary Explorers" style="height: 44px; width: auto;" />
+            <div>
+              <div class="mono" style="font-size: 12px; color: #f26a4f; letter-spacing: 0.1em; text-transform: uppercase;">Project Interplanetary Explorers</div>
+              <div style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em;">Explore ARES-NAV Live</div>
+            </div>
+          </div>
+
+          <p style="font-size: 16.5px; line-height: 1.5; color: #cbd5e1;">
+            Click <strong>&#9654; JUDGE TOUR</strong> in the top bar for a guided 5-stage narrated walkthrough, or open the HTTPS link on your smartphone and tap <strong>3D GOGGLES</strong> for live IMU head-tracking.
+          </p>
+
+          <div class="mono" style="display: flex; flex-direction: column; gap: 6px; font-size: 15.5px; margin-top: 4px;">
+            <div><span style="color: #94a3b8;">LIVE WEB APP: </span><strong style="color: #ffffff;">https://nguyenbill296william-debug.github.io/ares-nav/</strong></div>
+            <div><span style="color: #94a3b8;">REPOSITORY:   </span><span style="color: #cbd5e1;">https://github.com/nguyenbill296william-debug/ares-nav</span></div>
+          </div>
+        </div>
+
+        <div class="plate" style="height: 100%; min-height: 0;">
+          <div class="plate-img" style="border-color: rgba(255,255,255,0.2);">
+            <img src="assets/optimized/e2_-_PIA26374_-_Rim_Drive_Map_-_Final_1280.webp" alt="Jezero Crater Western Rim Traverse PIA26374" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- On-Screen Controls (Hidden in Print/Export) -->
+  <div id="deckHud" class="mono">
+    <button class="hud-btn" onclick="prevSlide()">&larr; Prev</button>
+    <div class="dot-nav" id="dotNav"></div>
+    <span id="hudCounter" style="font-size: 12px; font-weight: 600; padding: 0 6px;">1 / 7</span>
+    <button class="hud-btn" onclick="nextSlide()">Next &rarr;</button>
+    <button class="hud-btn" onclick="toggleFs()">Fullscreen</button>
+    <button class="hud-btn" onclick="window.print()">Save PDF</button>
+  </div>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const stage = document.getElementById('deckStage');
+      const dotNav = document.getElementById('dotNav');
+      const counter = document.getElementById('hudCounter');
+      const params = new URLSearchParams(window.location.search);
+      let idx = Math.max(0, Math.min(slides.length - 1, (parseInt(params.get('slide'), 10) || 1) - 1));
+
+      if (params.get('export') === '1') {
+        const hud = document.getElementById('deckHud');
+        if (hud) hud.style.display = 'none';
+      }
+
+      function fitStage() {
+        if (!document.body.classList.contains('deck-screen')) return;
+        const sx = window.innerWidth / 1920;
+        const sy = window.innerHeight / 1080;
+        stage.style.transform = 'scale(' + Math.min(sx, sy) + ')';
+      }
+
+      function renderNav() {
+        slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+        counter.textContent = (idx + 1) + ' / ' + slides.length;
+        dotNav.innerHTML = '';
+        slides.forEach((_, i) => {
+          const b = document.createElement('button');
+          b.className = 'dot' + (i === idx ? ' active' : '');
+          b.onclick = () => { idx = i; renderNav(); };
+          dotNav.appendChild(b);
+        });
+      }
+
+      window.nextSlide = function () { idx = (idx + 1) % slides.length; renderNav(); };
+      window.prevSlide = function () { idx = (idx - 1 + slides.length) % slides.length; renderNav(); };
+      window.toggleFs = function () {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+        else document.exitFullscreen().catch(() => {});
+      };
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); window.nextSlide(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); window.prevSlide(); }
+        else if (e.key === 'f' || e.key === 'F') { window.toggleFs(); }
+      });
+      window.addEventListener('resize', fitStage);
+      fitStage();
+      renderNav();
+    })();
+  </script>
+</body>
+</html>

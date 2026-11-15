@@ -80,40 +80,6 @@ window.ARES_GLOBE = (function () {
     }
   ];
 
-  // NASA Orbital GPS / Telemetry Relay Constellation
-  const ORBITERS = [
-    {
-      name: 'MRO (HiRISE / CRISM)',
-      altKm: 300,
-      incDeg: 93,
-      ascNodeDeg: 42,
-      speed: 0.75,
-      phase: 0.2,
-      color: '#f97316',
-      role: '0.25m/px DEM & Spectral Relay'
-    },
-    {
-      name: 'ODYSSEY (THEMIS IR)',
-      altKm: 400,
-      incDeg: 93.1,
-      ascNodeDeg: 148,
-      speed: 0.62,
-      phase: 2.1,
-      color: '#fbbf24',
-      role: 'Thermal Inertia & UHF EVA Comms'
-    },
-    {
-      name: 'MAVEN (SEP / RAD)',
-      altKm: 620,
-      incDeg: 74.2,
-      ascNodeDeg: 255,
-      speed: 0.48,
-      phase: 4.0,
-      color: '#a855f7',
-      role: 'Solar Energetic Particle Early Warning'
-    }
-  ];
-
   const VS_SOURCE = `
     attribute vec2 a_pos;
     varying vec2 v_uv;
@@ -362,10 +328,11 @@ window.ARES_GLOBE = (function () {
       globeState.rotLonDeg = 105 + Math.sin(globeState.orbitTime * 0.45) * 20;
     }
 
-    // Position the 3D Mars Globe slightly left of center on wide screens so the MARS telemetry panel sits cleanly on the right
-    const cx = w >= 1024 ? w * 0.40 : w * 0.50;
-    const cy = h * 0.51;
-    const radiusPx = Math.min(w * 0.34, h * 0.40) * globeState.zoomRadius;
+    // Position the 3D Mars Globe dead-center in the viewport with balanced symmetry between side panels
+    const cx = w * 0.50;
+    const cy = h * 0.50;
+    const maxSafeHorizR = w >= 1024 ? Math.max(165, (w - 650) * 0.46) : w * 0.36;
+    const radiusPx = Math.min(maxSafeHorizR, h * 0.41) * globeState.zoomRadius;
 
     // 1. Render WebGL 3D Raycasted Mars Sphere
     if (gl && texturesReady) {
@@ -410,87 +377,16 @@ window.ARES_GLOBE = (function () {
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 
-    // 2. Render 2D Orbital GPS Satellites, Landing Beacons & Relay Lock Telemetry
+    // 2. Render Clean Landing Sector Beacons & Planetary Landmarks (Zero Spinning Clutter)
     const ctx = hudCanvas.getContext('2d');
     ctx.save();
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    // Subtle orbital equatorial & polar GPS rings
-    ctx.save();
-    ctx.strokeStyle = 'rgba(249, 115, 22, 0.16)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, radiusPx * 1.24, radiusPx * 0.36, -0.18, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, radiusPx * 0.42, radiusPx * 1.22, 0.12, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
+    const safeMinX = w >= 1024 ? 336 : 16;
+    const safeMaxX = w >= 1024 ? w - 356 : w - 16;
+    const placedBoxes = [];
 
-    const activePin = PLANET_PINS.find((p) => p.id === appState.theaterKey) || PLANET_PINS[0];
-    const activePt = projectLatLonToView(activePin.lat, activePin.lon, cx, cy, radiusPx);
-
-    let satsInView = 0;
-
-    // Render 3 Orbiting GPS / Telemetry Relay Satellites
-    ORBITERS.forEach((sat) => {
-      const ang = globeState.orbitTime * sat.speed + sat.phase;
-      const orbitR = radiusPx * (1.16 + sat.altKm / 2400);
-      const inc = (sat.incDeg * Math.PI) / 180;
-      const node = (sat.ascNodeDeg * Math.PI) / 180;
-
-      const ox = Math.cos(ang) * Math.cos(node) - Math.sin(ang) * Math.cos(inc) * Math.sin(node);
-      const oy = Math.sin(ang) * Math.sin(inc);
-      const oz = Math.cos(ang) * Math.sin(node) + Math.sin(ang) * Math.cos(inc) * Math.cos(node);
-
-      const sx = cx + ox * orbitR;
-      const sy = cy - oy * orbitR;
-      const distFromCenter = Math.hypot(sx - cx, sy - cy);
-      if (oz < 0 && distFromCenter < radiusPx * 0.98) return;
-
-      satsInView++;
-
-      ctx.save();
-      ctx.fillStyle = sat.color;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Solar panel wings
-      ctx.strokeStyle = sat.color;
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(sx - 9, sy - 3);
-      ctx.lineTo(sx + 9, sy + 3);
-      ctx.stroke();
-
-      // Downlink telemetry beam to active EVA landing sector (if visible) or nadir sub-point
-      const targetX = activePt.visible ? activePt.x : cx + ox * radiusPx * 0.96;
-      const targetY = activePt.visible ? activePt.y : cy - oy * radiusPx * 0.96;
-      ctx.strokeStyle = activePt.visible
-        ? 'rgba(249, 115, 22, 0.34)'
-        : 'rgba(249, 115, 22, 0.20)';
-      ctx.lineWidth = 1.1;
-      ctx.setLineDash([3, 4]);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(targetX, targetY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.font = '700 10px "JetBrains Mono", monospace';
-      ctx.fillStyle = '#e7e5e4';
-      const satLbl = `SAT // ${sat.name}`;
-      const satTw = ctx.measureText(satLbl).width;
-      const satX = Math.min(w - satTw - 14, Math.max(14, sx + 10));
-      ctx.fillText(satLbl, satX, sy + 3);
-      ctx.restore();
-    });
-
-    // Render Planetary Pins & Clickable EVA Landing Sectors
     PLANET_PINS.forEach((pin) => {
       const pt = projectLatLonToView(pin.lat, pin.lon, cx, cy, radiusPx);
       pin._screenX = pt.x;
@@ -504,78 +400,68 @@ window.ARES_GLOBE = (function () {
       ctx.save();
       if (pin.isSector || isFocusedLandmark) {
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, isActiveSector ? 15 : 11, 0, Math.PI * 2);
-        ctx.fillStyle = isActiveSector ? 'rgba(249, 115, 22, 0.30)' : 'rgba(245, 158, 11, 0.20)';
+        ctx.arc(pt.x, pt.y, isActiveSector ? 14 : 10, 0, Math.PI * 2);
+        ctx.fillStyle = isActiveSector ? 'rgba(249, 115, 22, 0.28)' : 'rgba(245, 158, 11, 0.18)';
         ctx.fill();
         ctx.strokeStyle = pin.color;
-        ctx.lineWidth = isActiveSector ? 2.2 : 1.5;
+        ctx.lineWidth = isActiveSector ? 2.0 : 1.4;
         ctx.stroke();
       }
 
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, pin.isSector ? 5.5 : 3.8, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, pin.isSector ? 5.0 : 3.5, 0, Math.PI * 2);
       ctx.fillStyle = pin.color;
       ctx.fill();
       ctx.strokeStyle = '#0c0a09';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      const offsetX = pt.x >= cx ? 22 : -22;
-      const offsetY = pin.id === 'jezero' ? -24 : pin.isSector ? 20 : -16;
+      const preferRight = pt.x >= cx;
+      const offsetX = preferRight ? 20 : -20;
+      const offsetY = pin.id === 'jezero' ? -24 : pin.isSector ? 22 : -18;
 
       ctx.font = pin.isSector
-        ? '700 10.5px "JetBrains Mono", monospace'
-        : '600 9.5px "JetBrains Mono", monospace';
+        ? '700 10px "JetBrains Mono", monospace'
+        : '600 9px "JetBrains Mono", monospace';
       const label = pin.isSector ? `${pin.name} [DESCEND →]` : pin.name;
-      const tw = ctx.measureText(label).width + 16;
-      const rawBx = pt.x >= cx ? pt.x + offsetX : pt.x + offsetX - tw;
-      const bx = Math.max(14, Math.min(w - tw - 14, rawBx));
-      const by = Math.max(14, Math.min(h - 48, pt.y + offsetY - 11));
+      const tw = ctx.measureText(label).width + 14;
+      const rawBx = preferRight ? pt.x + offsetX : pt.x + offsetX - tw;
+      const bx = Math.max(safeMinX, Math.min(safeMaxX - tw, rawBx));
+      let by = Math.max(18, Math.min(h - 36, pt.y + offsetY - 11));
+
+      for (let step = 0; step < 5; step++) {
+        const overlap = placedBoxes.some(
+          (b) => !(bx + tw + 4 < b.x || bx - 4 > b.x + b.w || by + 24 < b.y || by - 4 > b.y + b.h)
+        );
+        if (!overlap) break;
+        by = Math.max(18, Math.min(h - 36, by + (preferRight ? 26 : -26)));
+      }
+      placedBoxes.push({ x: bx, y: by, w: tw, h: 22 });
 
       pin._boxX = bx;
       pin._boxY = by;
       pin._boxW = tw;
       pin._boxH = 22;
 
+      const anchorX = Math.abs(pt.x - bx) < Math.abs(pt.x - (bx + tw)) ? bx : bx + tw;
       ctx.strokeStyle = pin.color;
-      ctx.lineWidth = 1.3;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(pt.x, pt.y);
-      ctx.lineTo(pt.x >= cx ? bx : bx + tw, by + 11);
+      ctx.lineTo(anchorX, by + 11);
       ctx.stroke();
 
       ctx.fillStyle = 'rgba(12, 10, 9, 0.92)';
       ctx.fillRect(bx, by, tw, 22);
-      ctx.strokeStyle = pin.color;
+      ctx.strokeStyle = pin.isSector ? pin.color : 'rgba(168, 162, 158, 0.45)';
       ctx.strokeRect(bx, by, tw, 22);
 
       ctx.fillStyle = pin.isSector ? '#ffffff' : '#d6d3d1';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, bx + 8, by + 11);
+      ctx.fillText(label, bx + 7, by + 11);
       ctx.restore();
     });
-
-    // Bottom-Left Live Orbital Triangulation & HDOP Status Bar
-    const hdop = satsInView >= 3 ? '0.38m' : satsInView === 2 ? '0.62m' : '1.15m';
-    const centerLatStr = `${Math.abs(globeState.rotLatDeg).toFixed(1)}°${globeState.rotLatDeg >= 0 ? 'N' : 'S'}`;
-    const normLon = ((((globeState.rotLonDeg + 180) % 360) + 360) % 360) - 180;
-    const centerLonStr = `${Math.abs(normLon).toFixed(1)}°${normLon >= 0 ? 'E' : 'W'}`;
-    const statusStr = `ORBITAL PNT TRIANGULATION: ${Math.max(2, satsInView)}/3 RELAYS LOCKED • HDOP ${hdop} • SUB-POINT ${centerLatStr}, ${centerLonStr}`;
-
-    ctx.save();
-    ctx.font = '700 10px "JetBrains Mono", monospace';
-    const stW = ctx.measureText(statusStr).width + 24;
-    ctx.fillStyle = 'rgba(18, 16, 14, 0.88)';
-    ctx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
-    ctx.lineWidth = 1;
-    ctx.fillRect(24, h - 38, stW, 24);
-    ctx.strokeRect(24, h - 38, stW, 24);
-    ctx.fillStyle = '#fb923c';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(statusStr, 36, h - 26);
-    ctx.restore();
 
     ctx.restore();
   }
@@ -701,6 +587,12 @@ window.ARES_GLOBE = (function () {
     state: globeState,
     renderPlanetView,
     bindGlobeEvents,
+    focusLandmark(id) {
+      const pin = PLANET_PINS.find((p) => p.id === id);
+      if (!pin) return;
+      globeState.selectedLandmark = pin;
+      smoothFocusTo(pin.lat, pin.lon, 520);
+    },
     focusLatLon(lat, lon) {
       globeState.rotLatDeg = 8;
       globeState.rotLonDeg = 105; // Keep both Jezero (+77.2°E) and Gale (+137.8°E) visible on the front hemisphere

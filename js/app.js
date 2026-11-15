@@ -52,6 +52,7 @@
     ingenuityScoutActive: false,
     ingenuityPhase: 0,
     hoverProbe: null,
+    inspectedPoint: null,
     scrubScope: 'rim',             // 'rim' | 'full'
     scrubGpsCoord: null,
 
@@ -98,6 +99,7 @@
     loggedSamples: [
       {
         id: 'SMP-01',
+        theaterKey: 'gale',
         stationCode: 'WP-02',
         theater: 'Gale Crater (PIA26696)',
         name: 'Boxwork Cemented Fracture Core #01',
@@ -109,6 +111,7 @@
       },
       {
         id: 'SMP-02',
+        theaterKey: 'jezero',
         stationCode: 'WP-02',
         theater: 'Jezero Site 093',
         name: 'Bright Angel Hydrated Vein Core #2023-A',
@@ -343,14 +346,28 @@
     requestRedraw();
   }
 
+  function dismissTourIfManual() {
+    if (state.tourActive && !state._internalTourStep) {
+      state.tourActive = false;
+      state.tourAutoPlay = false;
+      if (state._tourTimer) clearTimeout(state._tourTimer);
+      const banner = document.getElementById('judgeTourBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+  }
+
   function setTheater(theaterKey) {
     if (!window.ARES_THEATERS[theaterKey]) return;
+    dismissTourIfManual();
     state.theaterKey = theaterKey;
     state.selectedWaypointIdx = 2;
     state.customHudImage = null;
     state.customBasemapUrl = null;
     state.customWaypoints = [];
     state.capcomTarget = null;
+    state.inspectedPoint = null;
+    const mpCard = document.getElementById('mapPointCard');
+    if (mpCard) mpCard.classList.add('hidden');
     state.zoom = 1.0;
     state.panX = 0;
     state.panY = 0;
@@ -385,6 +402,7 @@
   }
 
   function setMode(mode) {
+    dismissTourIfManual();
     if (mode !== 'visor' && state.vrGogglesMode && window.ARES_APP && window.ARES_APP.toggleVrGogglesMode) {
       window.ARES_APP.toggleVrGogglesMode();
     }
@@ -485,6 +503,7 @@
     const newId = `SMP-0${state.loggedSamples.length + 1}`;
     state.loggedSamples.unshift({
       id: newId,
+      theaterKey: state.theaterKey,
       stationCode: wp.code,
       theater: theater.shortName,
       name: `${wp.name} Core Sample`,
@@ -498,7 +517,7 @@
     const btn = document.getElementById('btnLogSample');
     if (btn) {
       const orig = btn.innerHTML;
-      btn.innerHTML = '✓ SAMPLE LOGGED';
+      btn.innerHTML = 'SAMPLE LOGGED';
       btn.classList.add('bg-emerald-600', 'text-white');
       setTimeout(() => {
         btn.innerHTML = orig;
@@ -560,14 +579,14 @@
       const remM = Math.max(0, Math.round(contingency.distToShelterM * (1 - (state.emergencyProgress || 0))));
       if (isShelteredNow) {
         if (gpsNextEl) {
-          gpsNextEl.textContent = `✓ SHELTERED AT ${contingency.shelterCode} (-${contingency.shieldingPct}% SEP DOSE) • STAGE 2 HAB-01 WALK-BACK (${contingency.distShelterToHabM}m) READY`;
+          gpsNextEl.textContent = `SHELTERED AT ${contingency.shelterCode} (-${contingency.shieldingPct}% SEP DOSE) • STAGE 2 HAB-01 WALK-BACK (${contingency.distShelterToHabM}m) READY`;
         }
         if (cautionTxt) {
           cautionTxt.textContent = `CREW SAFE INSIDE ${contingency.shelterCode} BASALT OVERHANG (-${contingency.shieldingPct}% PROTON FLUX) • AWAITING SOLAR DECAY FOR HAB-01 WALK-BACK`;
         }
       } else {
         if (gpsNextEl) {
-          gpsNextEl.textContent = `⚠ EMERGENCY SPRINT ${remM}m → ${contingency.shelterCode} ${contingency.shelterName.toUpperCase()} (${contingency.etaShelterMin} MIN ETA)`;
+          gpsNextEl.textContent = `[CONTINGENCY] SPRINT ${remM}m → ${contingency.shelterCode} ${contingency.shelterName.toUpperCase()} (${contingency.etaShelterMin} MIN ETA)`;
         }
         if (cautionTxt) {
           cautionTxt.textContent = `SUIT O₂ REGULATOR LEAK + SEP STORM • DIVERTING ${remM}m TO ${contingency.shelterCode} SHELTER (-${contingency.shieldingPct}% DOSE), THEN HAB-01`;
@@ -638,6 +657,93 @@
     document.getElementById('lblAbortRadius').textContent = `${stats.walkBackRadiusM}m (${stats.limitingSource})`;
     document.getElementById('lblRouteStats').textContent = `${stats.totalDistM}m • ${stats.totalMissionMin} min • ${stats.metabolicRateKcalHr} kcal/hr`;
 
+    // Populate Always-Visible Active Traverse Summary Strip & 4-Profile Trade-Off Drawer in Right Dock
+    const sumDistEl = document.getElementById('dockSumDist');
+    if (sumDistEl) sumDistEl.textContent = `${(stats.totalDistM || 0).toLocaleString()}m`;
+    const sumTimeEl = document.getElementById('dockSumTime');
+    if (sumTimeEl) sumTimeEl.textContent = `${stats.totalMissionMin || 0}m`;
+    const sumO2El = document.getElementById('dockSumO2');
+    if (sumO2El) {
+      const sav = stats.savings || {};
+      if (state.routingMode === 'direct') {
+        sumO2El.textContent = `${stats.o2LitersUsed || 0}L`;
+        sumO2El.className = 'text-[10.5px] font-extrabold text-rose-400';
+      } else {
+        sumO2El.textContent = `-${sav.o2SavedPct || 0}%`;
+        sumO2El.className = 'text-[10.5px] font-extrabold text-emerald-400';
+      }
+    }
+    const sumSlopeEl = document.getElementById('dockSumSlope');
+    if (sumSlopeEl) {
+      const ms = stats.maxSlopeDeg || 0;
+      sumSlopeEl.textContent = `${ms}°`;
+      sumSlopeEl.className =
+        ms >= 25
+          ? 'text-[10.5px] font-extrabold text-rose-400'
+          : ms >= 15
+          ? 'text-[10.5px] font-extrabold text-amber-300'
+          : 'text-[10.5px] font-extrabold text-emerald-400';
+    }
+    const profTagEl = document.getElementById('dockActiveProfileTag');
+    if (profTagEl) {
+      const pLabels = {
+        optimal: 'A* OPTIMAL',
+        science: 'A* MAX-SCIENCE',
+        rad_shelter: 'A* RAD-SHIELD',
+        direct: 'DIRECT LINE'
+      };
+      profTagEl.textContent = pLabels[state.routingMode] || 'A* OPTIMAL';
+    }
+    const stratRowsEl = document.getElementById('dockStrategyRows');
+    if (stratRowsEl && window.ARES_ENGINE && window.ARES_ENGINE.compareStrategies) {
+      const strats = window.ARES_ENGINE.compareStrategies(
+        state.theaterKey,
+        state.consumables,
+        state.sepStormActive,
+        state.customWaypoints
+      );
+      stratRowsEl.innerHTML = strats
+        .map((st) => {
+          const isAct = st.key === state.routingMode;
+          const sCol = st.maxSlopeDeg >= 25 ? 'text-rose-400' : 'text-emerald-400';
+          const distVal = st.distM ?? st.totalDistM ?? 0;
+          return `
+            <button
+              onclick="window.ARES_APP.setRoutingMode('${st.key}')"
+              class="w-full text-left px-2 py-1 rounded border transition flex items-center justify-between gap-1 text-[9.5px] ${
+                isAct
+                  ? 'bg-orange-600/20 border-orange-500 text-white font-extrabold'
+                  : 'bg-[#141210] border-[#292524] hover:border-[#44403c] text-stone-300'
+              }"
+            >
+              <span class="truncate">${st.label}</span>
+              <span class="text-stone-300 whitespace-nowrap flex-shrink-0">${distVal}m • ${st.o2LitersUsed}L • <span class="${sCol}">${st.maxSlopeDeg}°</span></span>
+            </button>
+          `;
+        })
+        .join('');
+    }
+    const legRowsEl = document.getElementById('dockLegRows');
+    if (legRowsEl && state.routeResult && state.routeResult.legs) {
+      legRowsEl.innerHTML = state.routeResult.legs
+        .map((lg, idx) => {
+          const lNum = lg.legNum ?? lg.legIdx ?? idx + 1;
+          const dwell = lg.dwellMin ?? lg.dwellMins ?? 0;
+          const sCol = lg.maxSlopeDeg >= 25 ? 'text-rose-400 font-bold' : 'text-emerald-400';
+          return `
+          <div class="flex items-center justify-between gap-1 text-stone-300">
+            <span class="font-bold text-amber-300 whitespace-nowrap">L${lNum}: ${lg.fromCode}&rarr;${lg.toCode}</span>
+            <span class="whitespace-nowrap">${lg.distM}m • ${lg.walkMin}m${dwell ? `+${dwell}m` : ''} • <span class="${sCol}">${lg.maxSlopeDeg}°</span></span>
+          </div>
+        `;
+        })
+        .join('');
+    }
+    const zBtn = document.getElementById('btnMapResetZoom');
+    if (zBtn) {
+      zBtn.textContent = state.zoom > 1.03 ? `${state.zoom.toFixed(1)}x ↺` : '1.0x FIT';
+    }
+
     // Live Astronaut Biometrics & Walk-Back Reserve Margin (Sensitive to 0.38g Mule Assist & Slope)
     const slopeFactor = Math.max(0, wp.slopeDeg || 6);
     const stormBoost = state.sepStormActive ? (isShelteredNow ? 6 : 18) : 0;
@@ -706,8 +812,8 @@
     if (buddyBadge && buddyCheck) {
       if (state.buddyFaultSim) {
         buddyBadge.textContent = buddyCheck.buddyTowSafe
-          ? `⚠ EV-2 TOW ACTIVE • END O₂ ${buddyCheck.endBuddyTowO2Pct}% (>15% SAFE)`
-          : `⚠ EV-2 TOW REDLINE BREACH • END O₂ ${buddyCheck.endBuddyTowO2Pct}% (<15%!)`;
+          ? `EV-2 TOW ACTIVE • END O₂ ${buddyCheck.endBuddyTowO2Pct}% (>15% SAFE)`
+          : `EV-2 TOW REDLINE BREACH • END O₂ ${buddyCheck.endBuddyTowO2Pct}% (<15%)`;
         buddyBadge.className = buddyCheck.buddyTowSafe
           ? 'px-2 py-0.5 rounded bg-amber-950/90 border border-amber-400 text-amber-200 font-extrabold'
           : 'px-2 py-0.5 rounded bg-red-950/95 border border-red-500 text-red-200 font-extrabold animate-pulse';
@@ -740,14 +846,25 @@
 
     const logEl = document.getElementById('sampleLogContainer');
     if (logEl) {
-      logEl.innerHTML = state.loggedSamples
-        .map(
-          (smp) => `
-          <div class="bg-[#1c1917] border border-[#292524] rounded-lg p-3 flex items-start gap-3">
+      const sortedSamples = state.loggedSamples.slice().sort((a, b) => {
+        const aAct = (!a.theaterKey || a.theaterKey === state.theaterKey) ? 0 : 1;
+        const bAct = (!b.theaterKey || b.theaterKey === state.theaterKey) ? 0 : 1;
+        return aAct - bAct;
+      });
+      logEl.innerHTML = sortedSamples
+        .map((smp) => {
+          const secKey = smp.theaterKey || (String(smp.id).includes('4462') ? 'gale' : 'jezero');
+          const isActiveSec = secKey === state.theaterKey;
+          const secBadge = secKey === 'gale' ? 'GALE CRATER' : 'JEZERO SITE 093';
+          return `
+          <div class="bg-[#1c1917] border ${isActiveSec ? 'border-orange-500/45' : 'border-[#292524] opacity-80'} rounded-lg p-3 flex items-start gap-3">
             <img src="${smp.thumb}" alt="${smp.id}" class="w-16 h-14 object-cover rounded border border-[#3f3a36] flex-shrink-0" />
             <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between gap-2">
-                <span class="font-mono-tech text-xs font-bold text-emerald-400">${smp.id} • ${smp.stationCode}</span>
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono-tech text-xs font-bold text-emerald-400">${smp.id} • ${smp.stationCode}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-mono-tech font-bold ${isActiveSec ? 'bg-orange-600/25 text-orange-300 border border-orange-500/50' : 'bg-[#292524] text-stone-400'}">${secBadge}</span>
+                </div>
                 <span class="font-mono-tech text-[10px] text-stone-400">${smp.sol} | ${smp.coords}</span>
               </div>
               <div class="text-sm font-bold text-stone-100 mt-0.5">${smp.name}</div>
@@ -755,8 +872,8 @@
               <p class="text-xs text-stone-400 mt-1 leading-snug">${smp.notes}</p>
             </div>
           </div>
-        `
-        )
+        `;
+        })
         .join('');
     }
 
@@ -827,9 +944,9 @@
           return `
             <div
               onclick="window.ARES_APP.inspectManifestImage('${panoPath}', '${(m.title || item.filename).replace(/'/g, '')}', '${badge} | ${coords}')"
-              class="bg-[#1c1917] border border-[#292524] hover:border-orange-500 rounded-lg overflow-hidden cursor-pointer transition group flex flex-col"
+              class="min-h-[216px] bg-[#1c1917] border border-[#292524] hover:border-orange-500 rounded-lg overflow-hidden cursor-pointer transition group flex flex-col"
             >
-              <div class="relative h-36 bg-[#0c0a09] overflow-hidden">
+              <div class="relative h-36 shrink-0 bg-[#0c0a09] overflow-hidden">
                 <img src="${item.thumb_webp}" loading="lazy" alt="${item.filename}" class="w-full h-full object-cover group-hover:scale-105 transition" />
                 <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-[#141210]/95 border border-orange-500/50 font-mono-tech text-[10px] font-bold text-orange-300">
                   ${m.subsystem_code || 'EDR'}
@@ -1026,8 +1143,85 @@
         // 3. If Plot Pin Mode is active (or Shift-Click), drop a custom EVA waypoint at world (nx, ny)
         if (state.plotPinMode || e.shiftKey) {
           plotCustomPinAt(mx, my, rect);
+          return;
         }
+
+        // 4. Otherwise, inspect the clicked Martian terrain spot directly on the map!
+        inspectMapPointAt(mx, my, rect);
       });
+
+      function inspectMapPointAt(mx, my, rect) {
+        const worldX = (mx - rect.width / 2 - state.panX) / state.zoom + rect.width / 2;
+        const worldY = (my - rect.height / 2 - state.panY) / state.zoom + rect.height / 2;
+        const nx = Math.max(0.03, Math.min(0.97, worldX / rect.width));
+        const ny = Math.max(0.03, Math.min(0.97, worldY / rect.height));
+        const theater = window.ARES_THEATERS[state.theaterKey];
+        const cell = window.ARES_ENGINE.sampleAt(nx, ny) || {
+          slopeDeg: 6.4,
+          elevM: theater.baseElevM || -2015,
+          thermalInertia: 320,
+          crismMineral: 'Carbonate-Silica Outcrop',
+          uhfLos: true,
+          uhfMarginDb: 22
+        };
+        const lat = (theater.baseLat || 18.435) + (0.5 - ny) * 0.018;
+        const lon = (theater.baseLon || 77.232) + (nx - 0.5) * 0.026;
+        const crew = getCurrentCrewNormPos();
+        const dxM = (nx - crew.nx) * 1600;
+        const dyM = (ny - crew.ny) * 1088;
+        const distM = Math.max(2, Math.round(Math.hypot(dxM, dyM)));
+        const bearingDeg = Math.round(((Math.atan2(dxM, -dyM) * 180) / Math.PI + 360) % 360);
+        const estMin = Math.max(1, Math.round(distM / 50));
+
+        state.inspectedPoint = {
+          nx,
+          ny,
+          lat,
+          lon,
+          elevM: Math.round(cell.elevM),
+          slopeDeg: cell.slopeDeg,
+          thermalInertia: cell.thermalInertia,
+          crismMineral: cell.crismMineral,
+          uhfLos: cell.uhfLos !== false,
+          uhfMarginDb: cell.uhfMarginDb ?? 21,
+          distM,
+          bearingDeg,
+          estMin
+        };
+
+        const card = document.getElementById('mapPointCard');
+        if (card && !state.terrain3dActive) {
+          card.classList.remove('hidden');
+          const cEl = document.getElementById('mpCoords');
+          const esEl = document.getElementById('mpElevSlope');
+          const reEl = document.getElementById('mpRangeEta');
+          const mEl = document.getElementById('mpMineralLine');
+          const coordsFmt = `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? 'N' : 'S'}, ${lon.toFixed(4)}°E`;
+          if (cEl) cEl.textContent = coordsFmt;
+          if (esEl) {
+            const tier =
+              cell.slopeDeg >= 25 ? 'HAZARD' : cell.slopeDeg >= 15 ? 'CAUTION' : 'SAFE';
+            esEl.textContent = `${Math.round(cell.elevM)}m • ${cell.slopeDeg}° ${tier}`;
+            esEl.className =
+              cell.slopeDeg >= 25
+                ? 'font-bold text-rose-400 mt-0.5'
+                : cell.slopeDeg >= 15
+                ? 'font-bold text-amber-300 mt-0.5'
+                : 'font-bold text-emerald-400 mt-0.5';
+          }
+          if (reEl) {
+            reEl.textContent = `${distM}m HDG ${String(bearingDeg).padStart(3, '0')}° (~${estMin}m walk)`;
+          }
+          if (mEl) {
+            const uhfStr =
+              cell.uhfLos !== false
+                ? `UHF +${cell.uhfMarginDb ?? 21}dB`
+                : `UHF SHADOW (${cell.uhfMarginDb ?? -6}dB)`;
+            mEl.textContent = `${cell.crismMineral} • ${cell.thermalInertia} TIU • ${uhfStr}`;
+          }
+        }
+        requestRedraw();
+      }
 
       // Double-click anywhere on the map to immediately plot a custom EVA waypoint
       mapCanvas.addEventListener('dblclick', (e) => {
@@ -1083,6 +1277,10 @@
           if (state.zoom <= 1.02) {
             state.panX = 0;
             state.panY = 0;
+          }
+          const zBtn = document.getElementById('btnMapResetZoom');
+          if (zBtn) {
+            zBtn.textContent = state.zoom > 1.03 ? `${state.zoom.toFixed(1)}x ↺` : '1.0x FIT';
           }
           requestRedraw();
         },
@@ -1231,6 +1429,7 @@
       window.ARES_TERRAIN3D.bindEvents(document.getElementById('terrain3dHudCanvas'), {
         onRedraw: requestRedraw,
         onSelectWaypoint: selectWaypoint,
+        onSelectHeli: () => window.ARES_APP.toggleHeliCam(),
         onFlyStop() {
           const fBtn = document.getElementById('btnFlyRoute');
           if (fBtn) {
@@ -1489,7 +1688,7 @@
         ) {
           const pinYaws =
             state.visorSourceMode === 'butler360'
-              ? [68, 112, 164, 292]
+              ? [42, 78, 108, 332]
               : (wp.arPins || []).map((p) => p.yawDeg);
           for (let i = 0; i < pinYaws.length; i++) {
             const diff = Math.abs(((pinYaws[i] - heading + 540) % 360) - 180);
@@ -1916,6 +2115,29 @@
       drawCurve('batteryPct', '#fbbf24', 1.6, false);
       drawCurve('scrubberPct', '#38bdf8', 1.6, false);
       drawCurve('buddyTowO2Pct', '#ef4444', state.buddyFaultSim ? 2.4 : 1.3, !state.buddyFaultSim);
+
+      // P50-P95 Monte Carlo Regolith-Slip Metabolic O₂ Confidence Cone
+      const startO2 = timeline[0] ? timeline[0].o2Pct : 86;
+      ctx.save();
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.16)';
+      ctx.beginPath();
+      timeline.forEach((pt, idx) => {
+        const x = 12 + (idx / Math.max(1, timeline.length - 1)) * (w - 24);
+        const y = yPct(pt.o2Pct);
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      for (let idx = timeline.length - 1; idx >= 0; idx--) {
+        const pt = timeline[idx];
+        const used = Math.max(0, startO2 - pt.o2Pct);
+        const p95Low = Math.max(0, pt.o2Pct - used * 0.22);
+        const x = 12 + (idx / Math.max(1, timeline.length - 1)) * (w - 24);
+        ctx.lineTo(x, yPct(p95Low));
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
       drawCurve('o2Pct', '#10b981', 2.2, false);
 
       // Live EVA Progress Cursor
@@ -1938,7 +2160,9 @@
       ctx.fillText(`MET +${endMin} MIN`, w - 14, h - 3);
 
       if (rdEl) {
-        rdEl.textContent = `END O₂: ${buddy.endNominalO2Pct ?? 52}% • EV-2 BUDDY-TOW END O₂: ${buddy.endBuddyTowO2Pct ?? 36}% (${buddy.buddyTowSafe !== false ? 'SAFE >15%' : 'BREACH <15%!'})`;
+        const endNom = buddy.endNominalO2Pct ?? 52;
+        const p95End = Math.max(0, +(endNom - Math.max(0, (state.consumables.o2Pct || 86) - endNom) * 0.22).toFixed(1));
+        rdEl.textContent = `O₂ P50: ${endNom}% (P95 SLIP: ${p95End}%) • EV-2 TOW END O₂: ${buddy.endBuddyTowO2Pct ?? 36}% (${buddy.buddyTowSafe !== false ? 'SAFE >15%' : 'BREACH <15%!'})`;
       }
       return;
     }
@@ -2112,15 +2336,21 @@
     setVisorSource,
     toggleDeclutter,
     logCurrentStationSample,
-    descendToSector(sectorKey) {
+    descendToSector(sectorKey, fromTour) {
       const theater = window.ARES_THEATERS[sectorKey];
+      if (fromTour) state._internalTourStep = true;
       setTheater(sectorKey);
+      if (fromTour) state._internalTourStep = false;
       if (state.activeMode === 'globe' && window.ARES_GLOBE && theater) {
         window.ARES_GLOBE.animateDescentTo(theater.baseLat, theater.baseLon, () => {
+          if (fromTour) state._internalTourStep = true;
           setMode('map');
+          if (fromTour) state._internalTourStep = false;
         });
       } else {
+        if (fromTour) state._internalTourStep = true;
         setMode('map');
+        if (fromTour) state._internalTourStep = false;
       }
     },
     toggleMarsAudio() {
@@ -2218,72 +2448,265 @@
       const stats = state.routeResult.stats || {};
       const savings = stats.savings || {};
       const weather = theater.medaWeather || {};
-      const samplesHtml = state.loggedSamples
-        .map(
-          (s) => `
-          <tr class="border-b border-[#292524]">
-            <td class="py-2 pr-3 font-bold text-emerald-400">${s.id}</td>
-            <td class="py-2 pr-3 text-orange-300 font-bold">${s.stationCode}</td>
-            <td class="py-2 pr-3 text-stone-100">${s.name}</td>
-            <td class="py-2 pr-3 text-amber-300">${s.mineral}</td>
-            <td class="py-2 text-stone-400">${s.coords}</td>
-          </tr>
-        `
-        )
+
+      // 1. Prepare live 2D Planned Route Map Snapshot state (rendered directly onto #fdfRouteSnapshotCanvas so it works offline on file:// without CORS taint)
+      const hasStrategicMap = !!(window.ARES_GIS && window.ARES_GIS.renderStrategicMap);
+      const snapState = Object.assign({}, state, {
+        zoom: 0.92,
+        panX: 0,
+        panY: -6,
+        hoverProbe: null,
+        inspectedPoint: null,
+        layers: Object.assign({}, state.layers),
+        _isSnapshot: true
+      });
+
+      // 2. Compare 4 Route Profiles & Build Turn-by-Turn EVA Walk Schedule
+      const strategies =
+        window.ARES_ENGINE && window.ARES_ENGINE.compareStrategies
+          ? window.ARES_ENGINE.compareStrategies(
+              state.theaterKey,
+              state.consumables,
+              state.sepStormActive,
+              state.customWaypoints
+            )
+          : [];
+      const shortProfileNames = {
+        optimal: 'A* Optimal (-O₂)',
+        science: 'A* Max-Science',
+        rad_shelter: 'A* Rad-Shield',
+        direct: 'Direct Baseline'
+      };
+      const stratRowsHtml = strategies
+        .map((st) => {
+          const isAct = st.key === state.routingMode;
+          const distVal = st.distM ?? st.totalDistM ?? 0;
+          const minVal = st.totalMin ?? st.totalMissionMin ?? 0;
+          const hzCount = st.hazardCount ?? st.scarpCrossings ?? 0;
+          const radMsv =
+            st.radDoseMsv !== undefined
+              ? Number(st.radDoseMsv).toFixed(3)
+              : ((st.totalRadDoseUsV || 45) / 1000).toFixed(3);
+          const sciPct =
+            st.scienceScore !== undefined
+              ? st.scienceScore
+              : Math.round((st.avgScienceIdx || 0.75) * 100);
+          const isUnsafe = !st.safe || st.maxSlopeDeg >= 25 || hzCount > 0;
+          const gradeLabel = isUnsafe
+            ? `${st.maxSlopeDeg}° (${hzCount || 1} NO-GO)`
+            : `${st.maxSlopeDeg}° SAFE`;
+          const pName = shortProfileNames[st.key] || st.label;
+          return `
+            <tr class="border-b border-[#292524] ${isAct ? 'bg-orange-600/15 font-extrabold' : ''}">
+              <td class="py-2 pr-2 whitespace-nowrap ${isAct ? 'text-orange-300' : 'text-stone-200'}">
+                <span>${pName}</span>
+                ${isAct ? '<span class="ml-1 px-1 py-0.5 rounded bg-orange-600/30 border border-orange-500/60 text-[8.5px] text-orange-200">ACTIVE</span>' : ''}
+              </td>
+              <td class="py-2 pr-2 whitespace-nowrap text-stone-100">${distVal}m</td>
+              <td class="py-2 pr-2 whitespace-nowrap text-stone-200">${minVal}m</td>
+              <td class="py-2 pr-2 whitespace-nowrap ${st.key === 'direct' ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${st.o2LitersUsed}L</td>
+              <td class="py-2 pr-2 whitespace-nowrap ${isUnsafe ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${gradeLabel}</td>
+              <td class="py-2 pr-2 whitespace-nowrap text-amber-300">${radMsv} mSv</td>
+              <td class="py-2 whitespace-nowrap text-sky-300 font-bold">${sciPct}%</td>
+            </tr>
+          `;
+        })
         .join('');
 
+      const legs = (state.routeResult && state.routeResult.legs) || [];
+      const legsHtml = legs
+        .map((lg, idx) => {
+          const lNum = String(lg.legNum ?? lg.legIdx ?? idx + 1).padStart(2, '0');
+          const dwell = lg.dwellMin ?? lg.dwellMins ?? 0;
+          const o2Val = lg.o2LitersUsed ?? lg.o2Liters ?? 0;
+          const climbStr =
+            typeof lg.climbM === 'number'
+              ? `${lg.climbM >= 0 ? '+' : ''}${lg.climbM}m`
+              : '+0m';
+          return `
+          <tr class="border-b border-[#292524]">
+            <td class="py-2 pr-2.5 whitespace-nowrap font-bold text-orange-300">LEG ${lNum}</td>
+            <td class="py-2 pr-2.5 whitespace-nowrap text-stone-100 font-bold">${lg.fromCode} &rarr; ${lg.toCode}</td>
+            <td class="py-2 pr-2.5 text-stone-300">${lg.toName}</td>
+            <td class="py-2 pr-2.5 whitespace-nowrap text-stone-100">${lg.distM}m (${climbStr}) • ${lg.walkMin}m${dwell ? `+${dwell}m` : ''}</td>
+            <td class="py-2 pr-2.5 whitespace-nowrap ${lg.maxSlopeDeg >= 25 ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${lg.maxSlopeDeg}°</td>
+            <td class="py-2 whitespace-nowrap text-amber-300 font-bold">${o2Val}L O₂</td>
+          </tr>
+        `;
+        })
+        .join('');
+
+      // 3. Filter Logged Samples to Active Mission Sector (never mix Gale & Jezero cores!)
+      const sectorSamples = state.loggedSamples.filter(
+        (s) => !s.theaterKey || s.theaterKey === state.theaterKey
+      );
+      const samplesHtml = sectorSamples.length
+        ? sectorSamples
+            .map(
+              (s) => `
+            <tr class="border-b border-[#292524]">
+              <td class="py-2 pr-3 whitespace-nowrap font-bold text-emerald-400">${s.id}</td>
+              <td class="py-2 pr-3 whitespace-nowrap text-orange-300 font-bold">${s.stationCode}</td>
+              <td class="py-2 pr-3 text-stone-100">${s.name}</td>
+              <td class="py-2 pr-3 text-amber-300">${s.mineral}</td>
+              <td class="py-2 whitespace-nowrap text-stone-400">${s.coords}</td>
+            </tr>
+          `
+            )
+            .join('')
+        : `<tr><td colspan="5" class="py-3 text-stone-400">No samples logged in ${theater.shortName} yet — click + LOG CORE on Field Station or + LOG ASSAY in Visor.</td></tr>`;
+
+      const fdfTitle = document.getElementById('fdfModalTitle');
+      if (fdfTitle) {
+        fdfTitle.textContent = `${theater.shortName.toUpperCase()} — EVA TRAVERSE PLAN, ROUTE TRADE-OFFS & SAMPLE MANIFEST`;
+      }
+
+      const buddyCheck = (state.routeResult && state.routeResult.buddyCheck) || {};
+      const endTowO2 = buddyCheck.endBuddyTowO2Pct !== undefined ? buddyCheck.endBuddyTowO2Pct : 38;
+      const slopeSafe = (stats.maxSlopeDeg || 0) < 25 && (stats.noGoViolations || 0) === 0;
+      const buddySafe = buddyCheck.buddyTowSafe !== false && endTowO2 >= 15;
+      const goVerdict = slopeSafe && buddySafe && !state.sepStormActive;
+      const activeRadMsv =
+        stats.radDoseMsv !== undefined
+          ? Number(stats.radDoseMsv).toFixed(3)
+          : ((stats.totalRadDoseUsV || 45) / 1000).toFixed(3);
+      const docId = `JSC-FDF-MARS-${state.theaterKey.toUpperCase()}-${state.theaterKey === 'jezero' ? 'S2023' : 'S4462'}`;
+
       body.innerHTML = `
+        <div class="bg-[#1c1917] border ${goVerdict ? 'border-emerald-500/45' : 'border-rose-500/60'} rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="px-2 py-0.5 rounded bg-[#141210] border border-[#3f3a36] text-[10px] font-bold text-stone-300">${docId}</span>
+            <span class="text-[11px] font-bold text-stone-200">${theater.missionBadge || theater.name}</span>
+            <span class="text-[10.5px] text-stone-400">CREW: EV-1 LEAD / EV-2 SCOUT • ${theater.roverCallsign || 'MULE ROVER'}</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span class="text-[10px] text-stone-400">OWLT COMMS: 14m 22s (AUTONOMOUS)</span>
+            <span class="px-2.5 py-0.5 rounded text-[10.5px] font-extrabold ${
+              goVerdict
+                ? 'bg-emerald-600/20 border border-emerald-500/60 text-emerald-300'
+                : 'bg-rose-600/20 border border-rose-500/70 text-rose-300'
+            }">
+              ${
+                goVerdict
+                  ? 'FLIGHT STATUS: GO FOR EVA TRAVERSE'
+                  : !slopeSafe
+                  ? 'FLIGHT STATUS: NO-GO (EXCEEDS 25° SCARP LIMIT)'
+                  : state.sepStormActive
+                  ? 'FLIGHT STATUS: CONTINGENCY SHELTER DIVERSION'
+                  : 'FLIGHT STATUS: CAUTION — CHECK BUDDY RESERVE'
+              }
+            </span>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3">
             <div class="text-[10px] text-stone-400">MISSION SECTOR</div>
             <div class="text-sm font-extrabold text-orange-400 mt-0.5">${theater.shortName}</div>
-            <div class="text-[10px] text-stone-300 mt-0.5">${theater.coords}</div>
+            <div class="text-[10px] text-stone-300 mt-0.5">${theater.coords} • Base ${theater.baseElevM}m</div>
           </div>
           <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3">
             <div class="text-[10px] text-stone-400">EVA TRAVERSE BUDGET</div>
-            <div class="text-sm font-extrabold text-stone-100 mt-0.5">${stats.totalDistM || 1420}m • ${stats.totalMissionMin || 184} min</div>
-            <div class="text-[10px] text-amber-300 mt-0.5">0.38g Metabolic: ${stats.metabolicRateKcalHr || 310} kcal/hr (${stats.o2LitersUsed || 195}L O₂)</div>
+            <div class="text-sm font-extrabold text-stone-100 mt-0.5">${stats.totalDistM || 1140}m • ${stats.totalMissionMin || 162} min</div>
+            <div class="text-[10px] text-amber-300 mt-0.5">0.38g Metabolic: ${stats.metabolicRateKcalHr || 185} kcal/hr (${stats.o2LitersUsed || 104}L O₂)</div>
           </div>
           <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3">
             <div class="text-[10px] text-stone-400">SUIT PLSS &amp; BUDDY RULE</div>
-            <div class="text-sm font-extrabold text-emerald-400 mt-0.5">O₂ ${state.consumables.o2Pct}% • CO₂ ${state.consumables.scrubberPct}%</div>
-            <div class="text-[10px] text-stone-300 mt-0.5">EV-2 Tow End O₂: ${(state.routeResult.buddyCheck && state.routeResult.buddyCheck.endBuddyTowO2Pct) || 38}% (&gt;15% Redline)</div>
+            <div class="text-sm font-extrabold text-emerald-400 mt-0.5">O₂ ${state.consumables.o2Pct}% • CO₂ ${state.consumables.scrubberPct}% • BATT ${state.consumables.batteryPct}%</div>
+            <div class="text-[10px] text-stone-300 mt-0.5">EV-2 Tow End O₂: ${endTowO2}% (&gt;15% Redline)</div>
           </div>
           <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3">
             <div class="text-[10px] text-stone-400">RAD DOSE &amp; DIURNAL ATMOS</div>
-            <div class="text-sm font-extrabold text-amber-400 mt-0.5">${((wp.radMsvHr || 0.021) * 3.1).toFixed(3)} mSv (&lt;15 mSv ALARA)</div>
+            <div class="text-sm font-extrabold text-amber-400 mt-0.5">${activeRadMsv} mSv (&lt;15 mSv ALARA)</div>
             <div class="text-[10px] text-stone-300 mt-0.5">LTST ${formatLtst(state.ltstHour)} • ${weather.pressureMbar ?? 7.4} mbar • τ=${(state.dustTau || 0.42).toFixed(2)}</div>
           </div>
         </div>
 
-        <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3.5 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <div class="text-[10px] text-stone-400">A* SUIT-PHYSICS O₂ SAVINGS</div>
-            <div class="text-xs font-extrabold text-emerald-400 mt-0.5">-${savings.o2SavedPct || 24}% PLSS O₂ vs Direct Line (${savings.o2LitersSaved || 42}L / ${savings.kcalSaved || 205} kcal saved)</div>
+        ${
+          hasStrategicMap
+            ? `
+        <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-3.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+            <span class="text-xs font-extrabold text-orange-400 uppercase">
+              Planned Surface GPS Route Snapshot (${state.customWaypoints.length ? `${theater.waypoints.length} Primary + ${state.customWaypoints.length} Custom EVA Pins` : `${theater.waypoints.length} Primary Waypoints`})
+            </span>
+            <span class="text-[10.5px] text-emerald-400 font-bold">
+              -${savings.o2SavedPct || 14}% PLSS O₂ vs Direct Scarp Line (${savings.o2LitersSaved || 18}L Saved • Max Grade ${stats.maxSlopeDeg || 14.5}° vs ${savings.directMaxSlopeDeg || 29.2}°)
+            </span>
           </div>
-          <div>
-            <div class="text-[10px] text-stone-400">SCARP &amp; SAND-TRAP AVOIDANCE</div>
-            <div class="text-xs font-extrabold text-orange-300 mt-0.5">Max Grade ${stats.maxSlopeDeg || 11.4}° vs ${savings.directMaxSlopeDeg || 28.5}° Direct (${savings.directHazards || 9} Cliffs Bypassed)</div>
+          <canvas id="fdfRouteSnapshotCanvas" class="w-full rounded-lg border border-[#3f3a36] bg-[#090807] block" style="height: 280px;"></canvas>
+        </div>
+        `
+            : ''
+        }
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-3.5">
+          <div class="xl:col-span-6 bg-[#1c1917] border border-[#292524] rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-extrabold text-orange-400 uppercase">
+                Pathplanner Strategy Trade-Off Matrix (4 Profiles)
+              </span>
+              <span class="text-[10px] text-stone-400">25.0° xEMU Grade Limit</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-[10.5px]">
+                <thead>
+                  <tr class="border-b border-[#3f3a36] text-stone-400">
+                    <th class="pb-1.5 pr-2 whitespace-nowrap">PROFILE</th>
+                    <th class="pb-1.5 pr-2 whitespace-nowrap">DIST</th>
+                    <th class="pb-1.5 pr-2 whitespace-nowrap">TIME</th>
+                    <th class="pb-1.5 pr-2 whitespace-nowrap">O₂</th>
+                    <th class="pb-1.5 pr-2 whitespace-nowrap">MAX GRADE</th>
+                    <th class="pb-1.5 pr-2 whitespace-nowrap">DOSE</th>
+                    <th class="pb-1.5 whitespace-nowrap">CRISM</th>
+                  </tr>
+                </thead>
+                <tbody>${stratRowsHtml}</tbody>
+              </table>
+            </div>
           </div>
-          <div>
-            <div class="text-[10px] text-stone-400">401 MHz UHF ROVER RELAY</div>
-            <div class="text-xs font-extrabold text-amber-300 mt-0.5">${(stats.uhfShadowMeters || 0) === 0 ? '100% Line-of-Sight Locked' : `${stats.uhfShadowMeters}m Terrain Shadow`} • Ascent +${stats.totalAscentM || 68}m</div>
+
+          <div class="xl:col-span-6 bg-[#1c1917] border border-[#292524] rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-extrabold text-amber-300 uppercase">
+                Turn-by-Turn EVA Walk Schedule (${legs.length} Legs)
+              </span>
+              <span class="text-[10px] text-stone-400">Walk + Station Assay</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-[10.5px]">
+                <thead>
+                  <tr class="border-b border-[#3f3a36] text-stone-400">
+                    <th class="pb-1.5 pr-2.5 whitespace-nowrap">LEG</th>
+                    <th class="pb-1.5 pr-2.5 whitespace-nowrap">SEGMENT</th>
+                    <th class="pb-1.5 pr-2.5">TARGET</th>
+                    <th class="pb-1.5 pr-2.5 whitespace-nowrap">DIST / ΔZ / TIME</th>
+                    <th class="pb-1.5 pr-2.5 whitespace-nowrap">SLOPE</th>
+                    <th class="pb-1.5 whitespace-nowrap">PLSS O₂</th>
+                  </tr>
+                </thead>
+                <tbody>${legsHtml}</tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <div class="bg-[#1c1917] border border-[#292524] rounded-xl p-4">
-          <div class="text-xs font-extrabold text-orange-400 uppercase mb-2">
-            Collected Geological Core &amp; SuperCam LIBS Assay Manifest (${state.loggedSamples.length} Samples)
+          <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <span class="text-xs font-extrabold text-orange-400 uppercase">
+              ${theater.shortName} Geological Core &amp; SuperCam LIBS Assay Manifest (${sectorSamples.length} Sector Sample${sectorSamples.length === 1 ? '' : 's'})
+            </span>
+            <span class="text-[10px] text-stone-400">Mars Sample Return (MSR) Chain-of-Custody Log</span>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-[11px]">
               <thead>
                 <tr class="border-b border-[#3f3a36] text-stone-400">
-                  <th class="pb-2 pr-3">SAMPLE ID</th>
-                  <th class="pb-2 pr-3">STATION</th>
+                  <th class="pb-2 pr-3 whitespace-nowrap">SAMPLE ID</th>
+                  <th class="pb-2 pr-3 whitespace-nowrap">STATION</th>
                   <th class="pb-2 pr-3">DESIGNATION</th>
                   <th class="pb-2 pr-3">MINERALOGY / BIOSIG</th>
-                  <th class="pb-2">COORDINATES</th>
+                  <th class="pb-2 whitespace-nowrap">COORDINATES</th>
                 </tr>
               </thead>
               <tbody>${samplesHtml}</tbody>
@@ -2292,27 +2715,112 @@
         </div>
       `;
       modal.classList.remove('hidden');
+      const snapCanvas = document.getElementById('fdfRouteSnapshotCanvas');
+      if (snapCanvas && hasStrategicMap) {
+        snapCanvas._fixedWidth = Math.max(880, snapCanvas.clientWidth || 1140);
+        snapCanvas._fixedHeight = 280;
+        const drawSnap = () => {
+          if (!document.body.contains(snapCanvas)) return;
+          window.ARES_GIS.renderStrategicMap(snapCanvas, snapState, drawSnap);
+        };
+        drawSnap();
+      }
     },
     closeMissionDebrief() {
       const modal = document.getElementById('missionDebriefModal');
       if (modal) modal.classList.add('hidden');
+      if (state.tourActive && !state._internalTourStep && state.tourStepIdx === 4) {
+        state.tourActive = false;
+        state.tourAutoPlay = false;
+        if (state._tourTimer) clearTimeout(state._tourTimer);
+        const banner = document.getElementById('judgeTourBanner');
+        if (banner) banner.classList.add('hidden');
+      }
     },
     exportScienceJson() {
       const theater = window.ARES_THEATERS[state.theaterKey];
+      const sectorSamples = state.loggedSamples.filter(
+        (s) => !s.theaterKey || s.theaterKey === state.theaterKey
+      );
       const payload = {
         mission: 'ARES-NAV xEVA Tactical & Scientific Debrief',
         exportedAt: new Date().toISOString(),
         sector: theater.name,
         coordinates: theater.coords,
+        routingMode: state.routingMode,
         consumables: state.consumables,
         routeSummary: state.routeResult.stats,
+        walkScheduleLegs: state.routeResult.legs || [],
         customWaypoints: state.customWaypoints,
-        loggedSamples: state.loggedSamples
+        loggedSamples: sectorSamples
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `ARES_NAV_FDF_DEBRIEF_${state.theaterKey.toUpperCase()}.json`;
+      a.click();
+    },
+    exportMissionGeoJson() {
+      const theater = window.ARES_THEATERS[state.theaterKey];
+      const path = (state.routeResult && state.routeResult.path) || [];
+      const features = [];
+
+      if (path.length > 1) {
+        features.push({
+          type: 'Feature',
+          properties: {
+            featureType: 'EVA_TRAVERSE_ROUTE',
+            routingProfile: state.routingMode,
+            sector: theater.name,
+            totalDistM: state.routeResult.stats && state.routeResult.stats.totalDistM,
+            o2LitersUsed: state.routeResult.stats && state.routeResult.stats.o2LitersUsed,
+            maxSlopeDeg: state.routeResult.stats && state.routeResult.stats.maxSlopeDeg
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: path.map((pt) => {
+              const cell = window.ARES_ENGINE.sampleAt(pt.nx, pt.ny);
+              const lat = cell ? cell.lat : +(theater.baseLat + (0.5 - pt.ny) * 0.0184).toFixed(5);
+              const lon = cell ? cell.lon : +(theater.baseLon + (pt.nx - 0.5) * 0.0285).toFixed(5);
+              const elev = cell ? Math.round(cell.elevM) : theater.baseElevM;
+              return [lon, lat, elev];
+            })
+          }
+        });
+      }
+
+      theater.waypoints.concat(state.customWaypoints || []).forEach((wp) => {
+        const cell = window.ARES_ENGINE.sampleAt(wp.x, wp.y);
+        const lat = cell ? cell.lat : +(theater.baseLat + (0.5 - wp.y) * 0.0184).toFixed(5);
+        const lon = cell ? cell.lon : +(theater.baseLon + (wp.x - 0.5) * 0.0285).toFixed(5);
+        const elev = cell ? Math.round(cell.elevM) : theater.baseElevM;
+        features.push({
+          type: 'Feature',
+          properties: {
+            featureType: 'EVA_STATION',
+            code: wp.code,
+            name: wp.name,
+            role: wp.role || 'science',
+            slopeDeg: wp.slopeDeg ?? (cell && cell.slopeDeg) ?? 0,
+            mineralogy: wp.crismMineral || (cell && cell.crismMineral) || ''
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [lon, lat, elev]
+          }
+        });
+      });
+
+      const geojson = {
+        type: 'FeatureCollection',
+        name: `ARES_NAV_${state.theaterKey.toUpperCase()}_TRAVERSE`,
+        crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:IAU:2015:49900' } },
+        features
+      };
+      const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `ARES_NAV_MMGIS_${state.theaterKey.toUpperCase()}.geojson`;
       a.click();
     },
     toggleMap3dSandbox() {
@@ -2331,21 +2839,44 @@
     toggleTerrain3d() {
       state.terrain3dActive = !state.terrain3dActive;
       const ov = document.getElementById('terrain3dOverlay');
-      const btn = document.getElementById('btnTerrain3d');
+      const btn2d = document.getElementById('btnMap2d');
+      const btn3d = document.getElementById('btnTerrain3d');
+      const zCtrls = document.getElementById('mapZoomControls');
+      const mpCard = document.getElementById('mapPointCard');
       if (ov) ov.classList.toggle('hidden', !state.terrain3dActive);
-      if (btn) {
-        btn.textContent = state.terrain3dActive ? '2D ORTHO' : '3D TERRAIN';
-        btn.classList.toggle('bg-amber-500', state.terrain3dActive);
-        btn.classList.toggle('text-stone-950', state.terrain3dActive);
-        btn.classList.toggle('bg-[#1c1917]', !state.terrain3dActive);
-        btn.classList.toggle('text-amber-300', !state.terrain3dActive);
+      if (zCtrls) zCtrls.classList.toggle('hidden', state.terrain3dActive);
+      if (mpCard && state.terrain3dActive) mpCard.classList.add('hidden');
+      if (btn2d) {
+        btn2d.className = !state.terrain3dActive
+          ? 'px-2 py-0.5 rounded bg-orange-600 text-white font-mono-tech text-[10px] font-extrabold transition'
+          : 'px-2 py-0.5 rounded text-stone-300 hover:text-white font-mono-tech text-[10px] font-bold transition';
+      }
+      if (btn3d) {
+        btn3d.className = state.terrain3dActive
+          ? 'px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-mono-tech text-[10px] font-extrabold transition'
+          : 'px-2 py-0.5 rounded text-amber-300 hover:text-white font-mono-tech text-[10px] font-bold transition';
       }
       if (state.terrain3dActive) {
+        if (state.theaterKey === 'jezero' && !state._autoScoutInitialized) {
+          state._autoScoutInitialized = true;
+          if (!state.ingenuityScoutActive) {
+            window.ARES_APP.toggleIngenuityScout();
+          }
+        }
         speakSuitVoice(
-          'JPL OnSight 3D Holographic Terrain Table active. Drag to orbit real MRO HiRISE topography or click Fly Route.'
+          'JPL OnSight 3D Holographic Terrain Table active. Drag to orbit real MRO HiRISE topography or click Heli Cam.'
         );
-      } else if (window.ARES_TERRAIN3D && window.ARES_TERRAIN3D.cam.flyActive) {
-        window.ARES_TERRAIN3D.toggleFlyRoute();
+      } else if (window.ARES_TERRAIN3D) {
+        if (window.ARES_TERRAIN3D.cam.flyActive) window.ARES_TERRAIN3D.toggleFlyRoute();
+        if (window.ARES_TERRAIN3D.cam.heliChase) {
+          window.ARES_TERRAIN3D.toggleHeliChase(false);
+          const hBtn = document.getElementById('btnHeliCam');
+          if (hBtn) {
+            hBtn.textContent = 'HELI CAM';
+            hBtn.classList.remove('bg-amber-500', 'text-stone-950');
+            hBtn.classList.add('bg-[#1c1917]', 'text-amber-300');
+          }
+        }
       }
       setTimeout(requestRedraw, 20);
     },
@@ -2363,8 +2894,42 @@
         fBtn.classList.toggle('bg-emerald-600/25', !flying);
         fBtn.classList.toggle('text-emerald-300', !flying);
       }
+      const hBtn = document.getElementById('btnHeliCam');
+      if (hBtn && flying) {
+        hBtn.textContent = 'HELI CAM';
+        hBtn.classList.remove('bg-amber-500', 'text-stone-950');
+        hBtn.classList.add('bg-[#1c1917]', 'text-amber-300');
+      }
       if (flying) {
         speakSuitVoice('Autonomous low-altitude canyon chase camera engaged along optimal traverse.');
+      }
+      requestRedraw();
+    },
+    toggleHeliCam() {
+      if (!window.ARES_TERRAIN3D) return;
+      if (!state.terrain3dActive) {
+        window.ARES_APP.toggleTerrain3d();
+      }
+      if (!state.ingenuityScoutActive) {
+        window.ARES_APP.toggleIngenuityScout();
+      }
+      const chasing = window.ARES_TERRAIN3D.toggleHeliChase();
+      const hBtn = document.getElementById('btnHeliCam');
+      if (hBtn) {
+        hBtn.textContent = chasing ? 'HELI CAM: ON' : 'HELI CAM';
+        hBtn.classList.toggle('bg-amber-500', chasing);
+        hBtn.classList.toggle('text-stone-950', chasing);
+        hBtn.classList.toggle('bg-[#1c1917]', !chasing);
+        hBtn.classList.toggle('text-amber-300', !chasing);
+      }
+      const fBtn = document.getElementById('btnFlyRoute');
+      if (fBtn && chasing) {
+        fBtn.innerHTML = '&#9654; FLY ROUTE';
+        fBtn.classList.remove('bg-emerald-600', 'text-white');
+        fBtn.classList.add('bg-emerald-600/25', 'text-emerald-300');
+      }
+      if (chasing) {
+        speakSuitVoice('Ingenuity 3D aerial scout chase camera locked. Drag to orbit coaxial rotorcraft.');
       }
       requestRedraw();
     },
@@ -2383,6 +2948,12 @@
         fBtn.innerHTML = '&#9654; FLY ROUTE';
         fBtn.classList.remove('bg-emerald-600', 'text-white');
         fBtn.classList.add('bg-emerald-600/25', 'text-emerald-300');
+      }
+      const hBtn = document.getElementById('btnHeliCam');
+      if (hBtn) {
+        hBtn.textContent = 'HELI CAM';
+        hBtn.classList.remove('bg-amber-500', 'text-stone-950');
+        hBtn.classList.add('bg-[#1c1917]', 'text-amber-300');
       }
       requestRedraw();
     },
@@ -2420,9 +2991,9 @@
       state.buddyFaultSim = !state.buddyFaultSim;
       const b = document.getElementById('btnBuddyFault');
       if (b) {
-        b.innerHTML = state.buddyFaultSim
-          ? '&#10003; CLEAR BUDDY FAULT'
-          : '&#9888; BUDDY-TOW FAULT CHECK';
+        b.textContent = state.buddyFaultSim
+          ? 'CLEAR BUDDY FAULT'
+          : 'BUDDY-TOW FAULT CHECK';
         b.classList.toggle('bg-red-600', state.buddyFaultSim);
         b.classList.toggle('text-white', state.buddyFaultSim);
       }
@@ -2525,6 +3096,7 @@
     logMicroLabSample() {
       if (!window.ARES_MICROLAB) return;
       const smp = window.ARES_MICROLAB.getAssaySamplePayload(state.loggedSamples.length + 1);
+      smp.theaterKey = state.theaterKey;
       state.loggedSamples.unshift(smp);
       syncAllUI();
       if (state.activeMode === 'science') renderScienceAndManifest();
@@ -2532,7 +3104,7 @@
       const btn = document.getElementById('btnLogMicroSample');
       if (btn) {
         const orig = btn.textContent;
-        btn.textContent = '✓ MICRO-ASSAY LOGGED TO FDF!';
+        btn.textContent = 'MICRO-ASSAY LOGGED TO FDF';
         setTimeout(() => {
           btn.textContent = orig;
         }, 1400);
@@ -2685,6 +3257,10 @@
     setSunAngle(val) {
       if (!window.ARES_GLOBE) return;
       window.ARES_GLOBE.state.sunAngleRad = Number(val);
+    },
+    focusGlobeLandmark(id) {
+      if (!window.ARES_GLOBE || !window.ARES_GLOBE.focusLandmark) return;
+      window.ARES_GLOBE.focusLandmark(id);
     },
     nextWaypoint() {
       const theater = window.ARES_THEATERS[state.theaterKey];
@@ -2943,6 +3519,15 @@
         );
       } else {
         window.ARES_APP.set3dAsset('perseverance');
+        if (window.ARES_TERRAIN3D && window.ARES_TERRAIN3D.cam.heliChase) {
+          window.ARES_TERRAIN3D.toggleHeliChase(false);
+        }
+        const hBtn = document.getElementById('btnHeliCam');
+        if (hBtn) {
+          hBtn.textContent = 'HELI CAM';
+          hBtn.classList.remove('bg-amber-500', 'text-stone-950');
+          hBtn.classList.add('bg-[#1c1917]', 'text-amber-300');
+        }
       }
       requestRedraw();
     },
@@ -3009,6 +3594,7 @@
       const newId = `LIBS-0${state.loggedSamples.length + 1}`;
       state.loggedSamples.unshift({
         id: newId,
+        theaterKey: state.theaterKey,
         stationCode: wp.code,
         theater: theater.shortName,
         name: `${targetName} (${wp.code})`,
@@ -3033,12 +3619,88 @@
       state.simRunning = !state.simRunning;
       const btn = document.getElementById('btnSimWalk');
       if (btn) {
-        btn.innerHTML = state.simRunning ? '&#10074;&#10074; PAUSE' : '&#9654; DRIVE';
+        btn.innerHTML = state.simRunning ? '&#10074;&#10074; PAUSE' : '&#9654; WALK SIM';
         btn.classList.toggle('bg-emerald-600', state.simRunning);
         btn.classList.toggle('text-white', state.simRunning);
         btn.classList.toggle('bg-[#1c1917]', !state.simRunning);
         btn.classList.toggle('text-emerald-400', !state.simRunning);
       }
+    },
+    zoomMap(delta) {
+      state.zoom = Math.max(1.0, Math.min(3.0, +(state.zoom + delta).toFixed(2)));
+      if (state.zoom <= 1.02) {
+        state.panX = 0;
+        state.panY = 0;
+      }
+      const zBtn = document.getElementById('btnMapResetZoom');
+      if (zBtn) {
+        zBtn.textContent = state.zoom > 1.03 ? `${state.zoom.toFixed(1)}x ↺` : '1.0x FIT';
+      }
+      requestRedraw();
+    },
+    resetMapView() {
+      state.zoom = 1.0;
+      state.panX = 0;
+      state.panY = 0;
+      const zBtn = document.getElementById('btnMapResetZoom');
+      if (zBtn) zBtn.textContent = '1.0x FIT';
+      requestRedraw();
+    },
+    clearInspectedPoint() {
+      state.inspectedPoint = null;
+      const card = document.getElementById('mapPointCard');
+      if (card) card.classList.add('hidden');
+      requestRedraw();
+    },
+    addInspectedStop() {
+      if (!state.inspectedPoint) return;
+      const ip = state.inspectedPoint;
+      const pinIdx = state.customWaypoints.length + 1;
+      const code = `EVA-0${pinIdx}`;
+      state.customWaypoints.push({
+        id: `custom_${Date.now()}`,
+        code,
+        name: `Custom EVA Target ${code}`,
+        role: 'science',
+        x: ip.nx,
+        y: ip.ny,
+        dwellMins: 18,
+        slopeDeg: ip.slopeDeg,
+        thermalInertia: ip.thermalInertia,
+        crismMineral: ip.crismMineral
+      });
+      const clrBtn = document.getElementById('btnClearPins');
+      if (clrBtn) clrBtn.classList.remove('hidden');
+      window.ARES_APP.clearInspectedPoint();
+      recomputeRoute();
+      speakSuitVoice(`Custom GPS pin ${code} added to planned route. Local slope ${ip.slopeDeg} degrees.`);
+    },
+    beamInspectedToVisor() {
+      if (!state.inspectedPoint) return;
+      const ip = state.inspectedPoint;
+      state.capcomTarget = {
+        nx: ip.nx,
+        ny: ip.ny,
+        label: 'CAPCOM PRIORITY TARGET',
+        mineral: ip.crismMineral,
+        slopeDeg: ip.slopeDeg,
+        elevM: ip.elevM,
+        distM: ip.distM,
+        bearingDeg: ip.bearingDeg,
+        ts: Date.now()
+      };
+      window.ARES_APP.clearInspectedPoint();
+      playQuindarTone(true);
+      broadcastMcDirective({
+        type: 'mark',
+        target: state.capcomTarget,
+        dustTau: state.dustTau,
+        ltstHour: state.ltstHour
+      });
+      speakSuitVoice(
+        `Priority outcrop marked in Visor at bearing ${ip.bearingDeg} degrees, range ${ip.distM} meters.`
+      );
+      requestRedraw();
     },
     fireLaser() {
       fireLaserAt(0.5, 0.5);
@@ -3178,8 +3840,8 @@
           vrGyroBtn.textContent = deniedOrInsecureMsg
             ? deniedOrInsecureMsg
             : state.gyroActive
-            ? '🎯 GYRO: ON'
-            : '🎯 ENABLE GYRO';
+            ? 'IMU GYRO: ON'
+            : 'ENABLE GYRO';
           vrGyroBtn.classList.toggle('border-emerald-400', state.gyroActive);
           vrGyroBtn.classList.toggle('text-emerald-300', state.gyroActive);
           vrGyroBtn.classList.toggle('border-amber-400/70', !state.gyroActive);
@@ -3491,7 +4153,7 @@
           } else if ((state.emergencyProgress || 0) >= 0.98) {
             const cBadge = document.getElementById('cautionTimerBadge');
             if (cBadge) {
-              cBadge.textContent = `✓ SHELTERED • O₂ ${state.consumables.o2Pct}% STABILIZED`;
+              cBadge.textContent = `SHELTERED • O₂ ${state.consumables.o2Pct}% STABILIZED`;
             }
           }
         }, 1500);
@@ -3567,9 +4229,9 @@
       const stages = [
         {
           badge: 'STAGE 1 / 5',
-          title: 'Orbital GPS Constellation Lock & Descent to Jezero Crater',
-          desc: '3D Mars Globe locked onto MRO, Odyssey & MAVEN relays above Neretva Vallis (18.44°N, 77.23°E). Descending to surface...',
-          voice: 'Stage 1. Orbital GPS constellation lock established. Descending into Jezero Crater Western Rim.'
+          title: 'Planetary Sector Selection & Descent to Jezero Crater',
+          desc: 'Centered 8K Mars Globe focused on Jezero Crater Site 093 (18.44°N, 77.23°E). Initiating orbital descent to surface...',
+          voice: 'Stage 1. Planetary landing sector verified. Descending into Jezero Crater Western Rim.'
         },
         {
           badge: 'STAGE 2 / 5',
@@ -3606,51 +4268,58 @@
       if (dEl) dEl.textContent = st.desc;
       speakSuitVoice(st.voice);
 
-      if (idx === 0) {
-        window.ARES_APP.closeMissionDebrief();
-        if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
-        setMode('globe');
-        setTimeout(() => {
-          if (state.tourActive && state.tourStepIdx === 0) {
-            window.ARES_APP.descendToSector('jezero');
+      state._internalTourStep = true;
+      try {
+        if (idx === 0) {
+          window.ARES_APP.closeMissionDebrief();
+          if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
+          setMode('globe');
+          setTimeout(() => {
+            if (state.tourActive && state.tourStepIdx === 0) {
+              window.ARES_APP.descendToSector('jezero', true);
+            }
+          }, 2800);
+        } else if (idx === 1) {
+          window.ARES_APP.closeMissionDebrief();
+          window.ARES_APP.closeMicroLab();
+          if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
+          setMode('map');
+          state.layers.topoSlope = true;
+          state.layers.m20Traverse = true;
+          if (!state.terrain3dActive) window.ARES_APP.toggleTerrain3d();
+          if (window.ARES_TERRAIN3D && !window.ARES_TERRAIN3D.cam.flyActive) {
+            window.ARES_APP.toggleFlyRoute();
           }
-        }, 2800);
-      } else if (idx === 1) {
-        window.ARES_APP.closeMissionDebrief();
-        window.ARES_APP.closeMicroLab();
-        if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
-        setMode('map');
-        state.layers.topoSlope = true;
-        state.layers.m20Traverse = true;
-        if (!state.terrain3dActive) window.ARES_APP.toggleTerrain3d();
-        if (window.ARES_TERRAIN3D && !window.ARES_TERRAIN3D.cam.flyActive) {
-          window.ARES_APP.toggleFlyRoute();
+          if (!state.ingenuityScoutActive) window.ARES_APP.toggleIngenuityScout();
+          if (!state.simRunning) window.ARES_APP.toggleSimWalk();
+          syncAllUI();
+          requestRedraw();
+        } else if (idx === 2) {
+          window.ARES_APP.closeMissionDebrief();
+          window.ARES_APP.closeMicroLab();
+          if (state.terrain3dActive) window.ARES_APP.toggleTerrain3d();
+          setMode('map');
+          if (!state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
+          requestRedraw();
+        } else if (idx === 3) {
+          window.ARES_APP.closeMissionDebrief();
+          if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
+          setMode('visor');
+          window.ARES_APP.setVisorSource('butler360');
+          setTimeout(() => {
+            fireLaserAt(0.52, 0.56);
+          }, 900);
+        } else if (idx === 4) {
+          if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
+          setMode('science');
+          setTimeout(() => {
+            if (state.tourActive && state.tourStepIdx === 4) {
+              window.ARES_APP.openMissionDebrief();
+            }
+          }, 600);
         }
-        if (!state.ingenuityScoutActive) window.ARES_APP.toggleIngenuityScout();
-        if (!state.simRunning) window.ARES_APP.toggleSimWalk();
-        syncAllUI();
-        requestRedraw();
-      } else if (idx === 2) {
-        window.ARES_APP.closeMissionDebrief();
-        window.ARES_APP.closeMicroLab();
-        if (state.terrain3dActive) window.ARES_APP.toggleTerrain3d();
-        setMode('map');
-        if (!state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
-        requestRedraw();
-      } else if (idx === 3) {
-        window.ARES_APP.closeMissionDebrief();
-        if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
-        setMode('visor');
-        window.ARES_APP.setVisorSource('butler360');
-        setTimeout(() => {
-          fireLaserAt(0.52, 0.56);
-        }, 900);
-      } else if (idx === 4) {
-        if (state.emergencyAbortActive) window.ARES_APP.toggleEmergencyAbort();
-        setMode('science');
-        setTimeout(() => {
-          window.ARES_APP.openMissionDebrief();
-        }, 600);
+      } finally {
+        state._internalTourStep = false;
       }
     }
   };
